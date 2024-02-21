@@ -33,7 +33,7 @@ export type Modifier
   | CmdBool
   | CmdInt
   | CmdFloat
-export type Instruction = Command(Modifier, String, List String, String) | Issue(String)
+export type Instruction = Command(List Modifier, String, List String, String) | Issue(String)
 export type Configuration = Configuration(String, String, List Instruction)
 
 flag :: String -> String
@@ -67,7 +67,7 @@ summarizeAliases = where {
     enflag(x)
 
   [x, ...rest] =>
-    `${Terminal.text.magenta(flag(x))} (${
+    `${Terminal.text.bold(flag(x))} (${
       pipe(
         List.sortBy(
           (a, b) => {
@@ -82,46 +82,54 @@ summarizeAliases = where {
     })`
 }
 
-parseKindAsString :: Modifier -> String
-parseKindAsString = where {
-  CmdString =>
-    "string"
+stringKind = where {
+  [Repeatable(n), ...x] =>
+    [...stringKind(x)]
 
-  CmdInt =>
-    "integer"
+  [CmdString, ...x] =>
+    ["string", ...stringKind(x)]
 
-  CmdFloat =>
-    "float"
+  [CmdInt, ...x] =>
+    ["integer", ...stringKind(x)]
 
-  CmdBool =>
-    "boolean"
+  [CmdFloat, ...x] =>
+    ["float", ...stringKind(x)]
+
+  [CmdBool, ...x] =>
+    ["boolean", ...stringKind(x)]
 
   _ =>
-    ""
+    []
 }
 
+parseKindsAsString :: List Modifier -> String
+parseKindsAsString = pipe(
+  stringKind,
+  String.join(" "),
+)
 
-summarize :: Modifier -> String -> List String -> String -> String
-summarize = (kind, name, aliases, description) => `${summarizeAliases([name, ...aliases])}: [${
-  IO.red(parseKindAsString(kind))
+
+summarize :: List Modifier -> String -> List String -> String -> String
+summarize = (kinds, name, aliases, description) => `${summarizeAliases([name, ...aliases])}: [${
+  IO.red(parseKindsAsString(kinds))
 }] - ${description}`
 
 // interpretCommands :: List Instruction -> String
 interpretCommands = pipe(
   map(
     where {
-      Command(modifier, name, aliases, description) =>
-        where(modifier) {
-          Repeatable(n) =>
-            `${summarize(CmdInt, name, aliases, description)} - Can be repeated ${
+      Command(modifiers, name, aliases, description) =>
+        where(modifiers) {
+          [Invalid(reason), ..._] =>
+            "Invalid! " ++ reason
+
+          [Repeatable(n), ..._] =>
+            `${summarize(modifiers, name, aliases, description)} - Can be repeated ${
               n < 0 ? "many" : show(n - 1)
             } times!`
 
-          Invalid(reason) =>
-            "Invalid! " ++ reason
-
           _ =>
-            summarize(modifier, name, aliases, description)
+            summarize(modifiers, name, aliases, description)
         }
     },
   ),

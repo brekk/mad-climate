@@ -4,6 +4,7 @@ import IO from "IO"
 
 import {
   CmdBool,
+  CmdInt,
   CmdString,
   Command,
   Configuration,
@@ -21,10 +22,15 @@ main = () => {
     "my-cool-cli",
     "A super excellent command line interface!",
     [
-      Command(CmdBool, "help", ["h"], "Show this help text!"),
-      Command(Repeatable(-1), "input", ["in", "i"], "Specify an input path"),
-      Command(CmdString, "output", ["o", "out"], "Specify an output path"),
-      Command(Repeatable(6), "verbose", ["v"], "Indicate the level of logging wanted (0-5)"),
+      Command([CmdBool], "help", ["h"], "Show this help text!"),
+      Command([Repeatable(-1), CmdString], "input", ["in", "i"], "Specify an input path"),
+      Command([CmdString], "output", ["o", "out"], "Specify an output path"),
+      Command(
+        [Repeatable(6), CmdInt],
+        "verbose",
+        ["v"],
+        "Indicate the level of logging wanted (0-5)",
+      ),
     ],
   )
   IO.putLine(help(cli))
