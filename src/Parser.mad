@@ -1,39 +1,123 @@
 import type { Maybe } from "Maybe"
 
+import { EQ, GT, LT } from "Compare"
 import Fn from "Function"
+import IO from "IO"
 import List from "List"
+import { fromMaybe } from "Maybe"
 import {} from "Scan"
 import String from "String"
+import Terminal from "Terminal"
 
 
 
+equals = Fn.equals
+ifElse = Fn.ifElse
 K = Fn.always
 
-export alias ArgvParser = String -> a
-export alias CommandCore = {
-  aliases :: List String,
-  isArray :: Boolean,
-  name :: Maybe String,
-  parser :: ArgvParser,
-}
-export type Instruction = Command(CommandCore) | Issue(String)
-export alias Configuration = List Instruction
+export alias ArgvParser a = String -> a
+// export alias CommandCore a = {
+//   aliases :: List String,
+//   isArray :: Boolean,
+//   name :: Maybe String,
+//   parser :: ArgvParser a,
+// }
+alias Name = String
+alias Aliases = List String
+alias Description = String
+export type Instruction
+  = Cmd(Name, Aliases, Description)
+  | CmdBool(Name, Aliases, Description)
+  | CmdFloat(Name, Aliases, Description)
+  | CmdInt(Name, Aliases, Description)
+  | CmdIncrement(Name, Aliases, Description)
+  | Repeatable(Instruction)
+  | Issue(String)
+export type Configuration = Configuration(Name, Description, List Instruction)
 
-instruct :: Boolean -> ArgvParser -> AliasList -> Instruction
-export instruct = (isArray, parser, names) => pipe(
-  List.length,
-  ifElse(
-    lt($, 1),
-    K(Issue("Instruction needs a name")),
-    (_) => Command({ isArray, parser, name: List.first(names), aliases: List.tail(names) }),
+flag :: String -> String
+flag = mappend("--")
+
+shortFlag :: String -> String
+shortFlag = mappend("-")
+
+enflag :: String -> String
+enflag = ifElse(
+  pipe(
+    String.length,
+    equals(1),
   ),
-)(names)
+  pipe(
+    shortFlag,
+    IO.green,
+  ),
+  pipe(
+    flag,
+    IO.yellow,
+  ),
+)
+
+// summarizeAliases :: List String -> String
+summarizeAliases = where {
+  [] =>
+    ``
+
+  [x] =>
+    enflag(x)
+
+  [x, ...rest] =>
+    `${Terminal.text.magenta(flag(x))} (${
+      pipe(
+        List.sortBy(
+          (a, b) => {
+            aa = String.length(a)
+            bb = String.length(b)
+            return aa == bb ? EQ : aa < bb ? GT : LT
+          },
+        ),
+        map(enflag),
+        String.join(" | "),
+      )(rest)
+    })`
+}
 
 
-export repeatable = instruct(true)
-export single = instruct(false)
+summarize :: String -> String -> List String -> String -> String
+summarize = (kind, name, aliases, description) => `${summarizeAliases([name, ...aliases])}: [${
+  IO.red(kind)
+}] - ${description}`
 
-export string = single(Fn.identity)
-export boolean = single(Fn.ifElse(String.isEmpty, K(true), K(false)))
+interpretCommands :: List Instruction -> String
+interpretCommands = pipe(
+  map(
+    where {
+      Repeatable(x) =>
+        interpretCommands([x]) ++ "; Can be invoked multiple times!"
 
-// export number => single(pipe(scan, fromMaybe(-1)))
+      Cmd(n, a, d) =>
+        summarize("string", n, a, d)
+
+      CmdBool(n, a, d) =>
+        summarize("boolean", n, a, d)
+
+      CmdFloat(n, a, d) =>
+        summarize("float", n, a, d)
+
+      CmdInt(n, a, d) =>
+        summarize("int", n, a, d)
+
+      CmdIncrement(n, a, d) =>
+        summarize("inc", n, a, d)
+    },
+  ),
+  String.join("\n * "),
+)
+
+interpret :: Configuration -> String
+export interpret = where {
+  Configuration(name, description, commands) =>
+    pipe(
+      interpretCommands,
+      mappend(name ++ "\n" ++ description ++ "\n\n * "),
+    )(commands)
+}

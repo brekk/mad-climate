@@ -7,6 +7,17 @@ import P from "./Parser"
 
 
 main = () => {
-  cli = [P.string(["help", "h"])]
-  IO.trace("Hello World", cli)
+  // cli = [P.(["help", "h"]), P.string(["input", "i"]), P.string(["output", "o"])]
+  cli = P.Configuration(
+    "my-cool-cli",
+    "A super excellent command line interface!",
+    [
+      P.CmdBool("help", ["h"], "Show this help text!"),
+      P.Repeatable(P.Cmd("input", ["in", "i"], "Specify an input path")),
+      P.Cmd("output", ["o", "out"], "Specify an output path"),
+      P.Repeatable(P.CmdIncrement("verbose", ["v"], "Indicate the level of logging wanted (0-5)")),
+    ],
+  )
+  // IO.cLog(cli)
+  IO.putLine(P.interpret(cli))
 }
