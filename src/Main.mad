@@ -2,22 +2,30 @@ import type { Configuration, Instruction } from "./Parser"
 
 import IO from "IO"
 
-import P from "./Parser"
+import {
+  CmdBool,
+  CmdString,
+  Command,
+  Configuration,
+  Invalid,
+  Issue,
+  Modal,
+  Repeatable,
+  help,
+} from "./Parser"
 
 
 
 main = () => {
-  // cli = [P.(["help", "h"]), P.string(["input", "i"]), P.string(["output", "o"])]
-  cli = P.Configuration(
+  cli = Configuration(
     "my-cool-cli",
     "A super excellent command line interface!",
     [
-      P.CmdBool("help", ["h"], "Show this help text!"),
-      P.Repeatable(P.Cmd("input", ["in", "i"], "Specify an input path")),
-      P.Cmd("output", ["o", "out"], "Specify an output path"),
-      P.Repeatable(P.CmdIncrement("verbose", ["v"], "Indicate the level of logging wanted (0-5)")),
+      Command(CmdBool, "help", ["h"], "Show this help text!"),
+      Command(Repeatable(-1), "input", ["in", "i"], "Specify an input path"),
+      Command(CmdString, "output", ["o", "out"], "Specify an output path"),
+      Command(Repeatable(6), "verbose", ["v"], "Indicate the level of logging wanted (0-5)"),
     ],
   )
-  // IO.cLog(cli)
-  IO.putLine(P.interpret(cli))
+  IO.putLine(help(cli))
 }

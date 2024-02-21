@@ -25,15 +25,16 @@ export alias ArgvParser a = String -> a
 alias Name = String
 alias Aliases = List String
 alias Description = String
-export type Instruction
-  = Cmd(Name, Aliases, Description)
-  | CmdBool(Name, Aliases, Description)
-  | CmdFloat(Name, Aliases, Description)
-  | CmdInt(Name, Aliases, Description)
-  | CmdIncrement(Name, Aliases, Description)
-  | Repeatable(Instruction)
-  | Issue(String)
-export type Configuration = Configuration(Name, Description, List Instruction)
+export type Modifier
+  = Repeatable(Integer)
+  | Invalid(String)
+  | Modal
+  | CmdString
+  | CmdBool
+  | CmdInt
+  | CmdFloat
+export type Instruction = Command(Modifier, String, List String, String) | Issue(String)
+export type Configuration = Configuration(String, String, List Instruction)
 
 flag :: String -> String
 flag = mappend("--")
@@ -81,43 +82,57 @@ summarizeAliases = where {
     })`
 }
 
+parseKindAsString :: Modifier -> String
+parseKindAsString = where {
+  CmdString =>
+    "string"
 
-summarize :: String -> String -> List String -> String -> String
+  CmdInt =>
+    "integer"
+
+  CmdFloat =>
+    "float"
+
+  CmdBool =>
+    "boolean"
+
+  _ =>
+    ""
+}
+
+
+summarize :: Modifier -> String -> List String -> String -> String
 summarize = (kind, name, aliases, description) => `${summarizeAliases([name, ...aliases])}: [${
-  IO.red(kind)
+  IO.red(parseKindAsString(kind))
 }] - ${description}`
 
-interpretCommands :: List Instruction -> String
+// interpretCommands :: List Instruction -> String
 interpretCommands = pipe(
   map(
     where {
-      Repeatable(x) =>
-        interpretCommands([x]) ++ "; Can be invoked multiple times!"
+      Command(modifier, name, aliases, description) =>
+        where(modifier) {
+          Repeatable(n) =>
+            `${summarize(CmdInt, name, aliases, description)} - Can be repeated ${
+              n < 0 ? "many" : show(n - 1)
+            } times!`
 
-      Cmd(n, a, d) =>
-        summarize("string", n, a, d)
+          Invalid(reason) =>
+            "Invalid! " ++ reason
 
-      CmdBool(n, a, d) =>
-        summarize("boolean", n, a, d)
-
-      CmdFloat(n, a, d) =>
-        summarize("float", n, a, d)
-
-      CmdInt(n, a, d) =>
-        summarize("int", n, a, d)
-
-      CmdIncrement(n, a, d) =>
-        summarize("inc", n, a, d)
+          _ =>
+            summarize(modifier, name, aliases, description)
+        }
     },
   ),
-  String.join("\n * "),
 )
 
-interpret :: Configuration -> String
-export interpret = where {
+help :: Configuration -> String
+export help = where {
   Configuration(name, description, commands) =>
     pipe(
       interpretCommands,
-      mappend(name ++ "\n" ++ description ++ "\n\n * "),
+      String.join("\n"),
+      mappend(name ++ "\n" ++ description ++ "\n\nFlags:\n"),
     )(commands)
 }
