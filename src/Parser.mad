@@ -110,7 +110,7 @@ parseKindsAsString = pipe(
 
 
 summarize :: List Modifier -> String -> List String -> String -> String
-summarize = (kinds, name, aliases, description) => `${summarizeAliases([name, ...aliases])}: [${
+summarize = (kinds, name, aliases, description) => `${summarizeAliases([name, ...aliases])}\n  [${
   IO.red(parseKindsAsString(kinds))
 }] - ${description}`
 
