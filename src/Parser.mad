@@ -1,0 +1,39 @@
+import type { Maybe } from "Maybe"
+
+import Fn from "Function"
+import List from "List"
+import {} from "Scan"
+import String from "String"
+
+
+
+K = Fn.always
+
+export alias ArgvParser = String -> a
+export alias CommandCore = {
+  aliases :: List String,
+  isArray :: Boolean,
+  name :: Maybe String,
+  parser :: ArgvParser,
+}
+export type Instruction = Command(CommandCore) | Issue(String)
+export alias Configuration = List Instruction
+
+instruct :: Boolean -> ArgvParser -> AliasList -> Instruction
+export instruct = (isArray, parser, names) => pipe(
+  List.length,
+  ifElse(
+    lt($, 1),
+    K(Issue("Instruction needs a name")),
+    (_) => Command({ isArray, parser, name: List.first(names), aliases: List.tail(names) }),
+  ),
+)(names)
+
+
+export repeatable = instruct(true)
+export single = instruct(false)
+
+export string = single(Fn.identity)
+export boolean = single(Fn.ifElse(String.isEmpty, K(true), K(false)))
+
+// export number => single(pipe(scan, fromMaybe(-1)))

@@ -1,0 +1,12 @@
+import type { Configuration, Instruction } from "./Parser"
+
+import IO from "IO"
+
+import P from "./Parser"
+
+
+
+main = () => {
+  cli = [P.string(["help", "h"])]
+  IO.trace("Hello World", cli)
+}
