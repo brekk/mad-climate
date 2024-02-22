@@ -19,7 +19,8 @@ import { flagWithValue, parse } from "@/Parser"
 
 
 main = () => {
-  IO.trace("HEY", parse(flagWithValue, "--cool=2024"))
+  // I seem to have messed up which Parser we're talking about
+  // IO.trace("HEY", parse(flagWithValue, "--cool=2024"))
   cli = Configuration(
     "my-cool-cli",
     "A super excellent command line interface!",
