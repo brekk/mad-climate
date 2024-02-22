@@ -1,6 +1,6 @@
 import type { Maybe } from "Maybe"
 
-import type { Configuration, Instruction, Modifier } from "@/Core"
+import type { Configuration, Instruction, Modifier } from "@/Argv"
 
 import { EQ, GT, LT } from "Compare"
 import Fn from "Function"
@@ -20,7 +20,7 @@ import {
   Configuration,
   Invalid,
   Repeatable,
-} from "@/Core"
+} from "@/Argv"
 import Flag from "@/Flag"
 
 

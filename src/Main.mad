@@ -1,4 +1,4 @@
-import type { Configuration, Instruction } from "@/Core"
+import type { Configuration, Instruction } from "@/Argv"
 
 import IO from "IO"
 
@@ -12,9 +12,9 @@ import {
   Issue,
   Modal,
   Repeatable,
-} from "@/Core"
+} from "@/Argv"
 import { help } from "@/Help"
-import { flagWithValue, parse } from "@/Parser"
+import { parse } from "@/Parser"
 
 
 

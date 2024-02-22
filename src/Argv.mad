@@ -11,9 +11,10 @@ export type Modifier
 export type Instruction = Command(List Modifier, String, List String, String) | Issue(String)
 export type Configuration = Configuration(String, String, List Instruction)
 
-export type Arg
-  = ArgString(String)
-  | ArgBoolean(Boolean)
-  | ArgInteger(Integer)
-  | ArgFloat(Float)
-  | ArgTrailing(String)
+export type Value
+  = ArgvString(String)
+  | ArgvBoolean(Boolean)
+  | ArgvInteger(Integer)
+  | ArgvFloat(Float)
+  | ArgvArray(List Value)
+  | ArgvTrailing(String)
