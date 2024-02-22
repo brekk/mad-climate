@@ -65,7 +65,7 @@ export parse = (parser, input) => pipe(
     Left(e) =>
       Left("Invalid arg: " ++ show(e))
 
-    Right(parsed) =>
+    Right(#[k, parsed]) =>
       where(parser) {
         ArgParser(parserFn) =>
           parserFn(parsed)

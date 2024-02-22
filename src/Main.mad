@@ -14,11 +14,12 @@ import {
   Repeatable,
 } from "@/Core"
 import { help } from "@/Help"
-import { flag } from "@/Parser"
+import { flagWithValue, parse } from "@/Parser"
 
 
 
 main = () => {
+  IO.trace("HEY", parse(flagWithValue, "--cool=2024"))
   cli = Configuration(
     "my-cool-cli",
     "A super excellent command line interface!",
