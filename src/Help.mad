@@ -1,0 +1,121 @@
+import type { Maybe } from "Maybe"
+
+import type { Configuration, Instruction, Modifier } from "@/Core"
+
+import { EQ, GT, LT } from "Compare"
+import Fn from "Function"
+import IO from "IO"
+import List from "List"
+import { fromMaybe } from "Maybe"
+import {} from "Scan"
+import String from "String"
+import Terminal from "Terminal"
+
+import {
+  CmdBool,
+  CmdFloat,
+  CmdInt,
+  CmdString,
+  Command,
+  Configuration,
+  Invalid,
+  Repeatable,
+} from "@/Core"
+import Flag from "@/Flag"
+
+
+
+equals = Fn.equals
+ifElse = Fn.ifElse
+K = Fn.always
+
+
+sortByStringLength :: List String -> List String
+sortByStringLength = List.sortBy(
+  (a, b) => {
+    aa = String.length(a)
+    bb = String.length(b)
+    return aa == bb ? EQ : aa < bb ? GT : LT
+  },
+)
+
+stringifyAliases :: List String -> String
+stringifyAliases = pipe(
+  sortByStringLength,
+  map(Flag.auto),
+  String.join(" | "),
+)
+
+summarizeAliases :: List String -> String
+summarizeAliases = where {
+  [] =>
+    ``
+
+  [x] =>
+    Flag.auto(x)
+
+  [x, ...rest] =>
+    `${Terminal.text.bold(Flag.long(x))} (${stringifyAliases(rest)})`
+}
+
+stringKind = where {
+  [Repeatable(n), ...x] =>
+    [...stringKind(x)]
+
+  [CmdString, ...x] =>
+    ["string", ...stringKind(x)]
+
+  [CmdInt, ...x] =>
+    ["integer", ...stringKind(x)]
+
+  [CmdFloat, ...x] =>
+    ["float", ...stringKind(x)]
+
+  [CmdBool, ...x] =>
+    ["boolean", ...stringKind(x)]
+
+  _ =>
+    []
+}
+
+parseKindsAsString :: List Modifier -> String
+parseKindsAsString = pipe(
+  stringKind,
+  String.join(" "),
+)
+
+
+summarize :: List Modifier -> String -> List String -> String -> String
+summarize = (kinds, name, aliases, description) => `${summarizeAliases([name, ...aliases])}\n  [${
+  IO.red(parseKindsAsString(kinds))
+}] - ${description}`
+
+repeatText :: Integer -> String
+repeatText = (n) => "Can be repeated " ++ (n < 0 ? "many" : show(n - 1)) ++ " times!"
+
+interpretCommands :: List Instruction -> List String
+interpretCommands = map(
+  where {
+    Command(mods, name, aliases, desc) =>
+      where(mods) {
+        [Invalid(reason), ..._] =>
+          "Invalid! " ++ reason
+
+        [Repeatable(n), ..._] =>
+          summarize(mods, name, aliases, desc) ++ " - " ++ repeatText(n)
+
+        _ =>
+          summarize(mods, name, aliases, desc)
+      }
+  },
+)
+
+help :: Configuration -> String
+export help = where {
+  Configuration(name, description, commands) =>
+    pipe(
+      interpretCommands,
+      String.join("\n"),
+      mappend(name ++ "\n" ++ description ++ "\n\nFlags:\n"),
+    )(commands)
+}

@@ -1,0 +1,19 @@
+export type Modifier
+  = Repeatable(Integer)
+  | Invalid(String)
+  | Modal
+  | CmdString
+  | CmdBool
+  | CmdInt
+  | CmdFloat
+  | CmdTrailing
+
+export type Instruction = Command(List Modifier, String, List String, String) | Issue(String)
+export type Configuration = Configuration(String, String, List Instruction)
+
+export type Arg
+  = ArgString(String)
+  | ArgBoolean(Boolean)
+  | ArgInteger(Integer)
+  | ArgFloat(Float)
+  | ArgTrailing(String)

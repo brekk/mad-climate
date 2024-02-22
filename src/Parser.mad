@@ -1,146 +1,74 @@
-import type { Maybe } from "Maybe"
+import type { Either } from "Either"
 
-import { EQ, GT, LT } from "Compare"
-import Fn from "Function"
-import IO from "IO"
-import List from "List"
-import { fromMaybe } from "Maybe"
-import {} from "Scan"
+import type { Arg } from "@/Core"
+import type { Flag } from "@/Flag"
+
+import { Left, Right } from "Either"
+import Parse from "Parse"
 import String from "String"
-import Terminal from "Terminal"
+
+import { ArgBoolean, ArgFloat, ArgInteger, ArgString, ArgTrailing } from "@/Core"
+import { Flag } from "@/Flag"
 
 
 
-equals = Fn.equals
-ifElse = Fn.ifElse
-K = Fn.always
+invertedFlag :: Parse.Parser #[String, Arg]
+export invertedFlag = do {
+  _ <- Parse.string("--no-")
+  key <- Parse.manyTill(Parse.anyChar, Parse.char(' '))
 
-export alias ArgvParser a = String -> a
-// export alias CommandCore a = {
-//   aliases :: List String,
-//   isArray :: Boolean,
-//   name :: Maybe String,
-//   parser :: ArgvParser a,
-// }
-alias Name = String
-alias Aliases = List String
-alias Description = String
-export type Modifier
-  = Repeatable(Integer)
-  | Invalid(String)
-  | Modal
-  | CmdString
-  | CmdBool
-  | CmdInt
-  | CmdFloat
-export type Instruction = Command(List Modifier, String, List String, String) | Issue(String)
-export type Configuration = Configuration(String, String, List Instruction)
-
-flag :: String -> String
-flag = mappend("--")
-
-shortFlag :: String -> String
-shortFlag = mappend("-")
-
-enflag :: String -> String
-enflag = ifElse(
-  pipe(
-    String.length,
-    equals(1),
-  ),
-  pipe(
-    shortFlag,
-    IO.green,
-  ),
-  pipe(
-    flag,
-    IO.yellow,
-  ),
-)
-
-// summarizeAliases :: List String -> String
-summarizeAliases = where {
-  [] =>
-    ``
-
-  [x] =>
-    enflag(x)
-
-  [x, ...rest] =>
-    `${Terminal.text.bold(flag(x))} (${
-      pipe(
-        List.sortBy(
-          (a, b) => {
-            aa = String.length(a)
-            bb = String.length(b)
-            return aa == bb ? EQ : aa < bb ? GT : LT
-          },
-        ),
-        map(enflag),
-        String.join(" | "),
-      )(rest)
-    })`
+  return of(#[String.fromList(key), ArgBoolean(false)])
 }
 
-stringKind = where {
-  [Repeatable(n), ...x] =>
-    [...stringKind(x)]
 
-  [CmdString, ...x] =>
-    ["string", ...stringKind(x)]
+flag :: Parse.Parser #[String, Arg]
+export flag = do {
+  _ <- Parse.some(Parse.char('-'))
+  key <- Parse.manyTill(Parse.anyChar, Parse.char(' '))
 
-  [CmdInt, ...x] =>
-    ["integer", ...stringKind(x)]
-
-  [CmdFloat, ...x] =>
-    ["float", ...stringKind(x)]
-
-  [CmdBool, ...x] =>
-    ["boolean", ...stringKind(x)]
-
-  _ =>
-    []
+  return of(#[String.fromList(key), ArgBoolean(true)])
 }
 
-parseKindsAsString :: List Modifier -> String
-parseKindsAsString = pipe(
-  stringKind,
-  String.join(" "),
-)
+flagWithValue :: Parse.Parser #[String, Arg]
+export flagWithValue = do {
+  _ <- Parse.some(Parse.char('-'))
+  key <- Parse.manyTill(Parse.anyChar, Parse.choice([Parse.char('='), Parse.char(' ')]))
+  value <- Parse.manyTill(Parse.anyChar, Parse.char(' '))
 
-
-summarize :: List Modifier -> String -> List String -> String -> String
-summarize = (kinds, name, aliases, description) => `${summarizeAliases([name, ...aliases])}\n  [${
-  IO.red(parseKindsAsString(kinds))
-}] - ${description}`
-
-// interpretCommands :: List Instruction -> String
-interpretCommands = pipe(
-  map(
-    where {
-      Command(modifiers, name, aliases, description) =>
-        where(modifiers) {
-          [Invalid(reason), ..._] =>
-            "Invalid! " ++ reason
-
-          [Repeatable(n), ..._] =>
-            `${summarize(modifiers, name, aliases, description)} - Can be repeated ${
-              n < 0 ? "many" : show(n - 1)
-            } times!`
-
-          _ =>
-            summarize(modifiers, name, aliases, description)
-        }
-    },
-  ),
-)
-
-help :: Configuration -> String
-export help = where {
-  Configuration(name, description, commands) =>
-    pipe(
-      interpretCommands,
-      String.join("\n"),
-      mappend(name ++ "\n" ++ description ++ "\n\nFlags:\n"),
-    )(commands)
+  return of(#[String.fromList(key), ArgString(String.fromList(value))])
 }
+
+export type ArgParser r = ArgParser(Arg -> Either String r)
+
+getParserFn :: ArgParser a -> Arg -> Either String a
+getParserFn = (parser) => where(parser) {
+  ArgParser(fn) =>
+    fn
+}
+
+argValue :: Parse.Parser #[String, Arg]
+export argValue = do {
+  _ <- alt(Parse.spaces, pure([]))
+  return Parse.choice([flag, flagWithValue, invertedFlag])
+}
+
+parseValue :: ArgParser a -> Arg -> Either String a
+export parseValue = (parser, input) => where(parser) {
+  ArgParser(parserFn) =>
+    parserFn(input)
+}
+
+parse :: ArgParser a -> String -> Either String a
+export parse = (parser, input) => pipe(
+  Parse.runParser(argValue),
+  where {
+    Left(e) =>
+      Left("Invalid arg: " ++ show(e))
+
+    Right(parsed) =>
+      where(parser) {
+        ArgParser(parserFn) =>
+          parserFn(parsed)
+      }
+  },
+)(input)

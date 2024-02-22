@@ -1,0 +1,34 @@
+import Fn from "Function"
+import IO from "IO"
+import String from "String"
+
+
+
+I = Fn.identity
+
+long :: String -> String
+export long = mappend("--")
+
+short :: String -> String
+export short = mappend("-")
+
+autoWithColor :: Boolean -> String -> String
+export autoWithColor = (withColor, str) => Fn.ifElse(
+  pipe(
+    String.length,
+    Fn.equals(1),
+  ),
+  pipe(
+    short,
+    withColor ? IO.green : I,
+  ),
+  pipe(
+    long,
+    withColor ? IO.yellow : I,
+  ),
+)(str)
+
+export auto = autoWithColor(true)
+
+// Flag name longOrShort
+export type Flag = Flag(String, Boolean)
