@@ -12,7 +12,8 @@ export type Instruction = Command(List Modifier, String, List String, String) | 
 export type Configuration = Configuration(String, String, List Instruction)
 
 export type Value
-  = ArgvString(String)
+  = ArgvFlag(String)
+  | ArgvString(String)
   | ArgvBoolean(Boolean)
   | ArgvInteger(Integer)
   | ArgvFloat(Float)

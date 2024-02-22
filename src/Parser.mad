@@ -7,14 +7,36 @@ import Dictionary from "Dictionary"
 import { Left, Right } from "Either"
 import {} from "Float"
 import { always } from "Function"
+import IO from "IO"
 import {} from "Integer"
 import List from "List"
 import { Just, Nothing } from "Maybe"
 import Parse from "Parse"
-import { char, choice, digit, many, notChar, runParser, sepBy, some, spaces, symbol } from "Parse"
+import {
+  char,
+  choice,
+  digit,
+  many,
+  notChar,
+  oneOf,
+  runParser,
+  sepBy,
+  some,
+  someTill,
+  spaces,
+  symbol,
+} from "Parse"
 import String from "String"
 
-import { ArgvArray, ArgvBoolean, ArgvFloat, ArgvInteger, ArgvString } from "@/Argv"
+import {
+  ArgvArray,
+  ArgvBoolean,
+  ArgvFlag,
+  ArgvFloat,
+  ArgvInteger,
+  ArgvString,
+  ArgvTrailing,
+} from "@/Argv"
 
 
 
@@ -30,11 +52,22 @@ stringCharacter = choice([
 ])
 
 
-argvString :: Parse.Parser Value
-argvString = do {
+argvExplicitString :: Parse.Parser Value
+argvExplicitString = do {
   _ <- char('"')
   cs <- many(stringCharacter)
   _ <- symbol(`"`)
+
+  return pipe(
+    String.fromList,
+    ArgvString,
+    of,
+  )(cs)
+}
+
+argvString :: Parse.Parser Value
+argvString = do {
+  cs <- many(stringCharacter)
 
   return pipe(
     String.fromList,
@@ -90,7 +123,7 @@ argvBoolean = pipe(
   map((b) => b == "true" ? ArgvBoolean(true) : ArgvBoolean(false)),
 )([symbol("true"), symbol("false")])
 
-
+/*
 argvArray :: Parse.Parser Value
 argvArray = do {
   _ <- symbol("[")
@@ -100,8 +133,21 @@ argvArray = do {
 
   return of(ArgvArray(items))
 }
+*/
 
-
+argvFlag :: Parse.Parser Value
+export argvFlag = do {
+  tag <- someTill(
+    char('-'),
+    pipe(
+      oneOf,
+      some,
+    )([' ', '=']),
+  )
+  IO.trace("tag", tag)
+  // tag <- someTill(char("-"), pipe(oneOf, some)([' ', '=']))
+  return of(ArgvFlag(String.fromList(tag)))
+}
 
 
 
@@ -109,7 +155,7 @@ argvValue :: Parse.Parser Value
 export argvValue = do {
   _ <- alt(spaces, pure([]))
 
-  return choice([argvFloat, argvInteger, argvBoolean, argvString, argvArray])
+  return choice([argvFloat, argvInteger, argvBoolean, argvString, argvFlag])
 }
 
 
@@ -117,11 +163,6 @@ export argvValue = do {
 // Parser Public API
 // ----------
 
-/**
- * Parser type
- *
- * @since 0.11.0
- */
 export type Parser r = Parser(Value -> Either String r)
 
 getParserFn :: Parser a -> Value -> Either String a
@@ -130,16 +171,6 @@ getParserFn = (parser) => where(parser) {
     fn
 }
 
-
-/**
- * Runs the given parser on a string input and returns and Either
- * which contains the value or is a Left if it failed.
- *
- * @since 0.11.0
- * @example
- * parse(string, `"Argv string"`) // Right("Argv string")
- * parse(string, `3`) // Left("Error parsing string")
- */
 parse :: Parser a -> String -> Either String a
 export parse = (parser, input) => pipe(
   runParser(argvValue),
@@ -162,37 +193,14 @@ export parseValue = (parser, input) => where(parser) {
     parserFn(input)
 }
 
-
-/**
- * Parser constructor function
- *
- * @since 0.11.0
- * @example
- * succeed(47)
- */
 succeed :: a -> Parser a
 export succeed = (a) => Parser(() => Right(a))
 
 
-/**
- * Creates a failing parser from an error string
- *
- * @since 0.11.0
- * @example
- * fail("This did not work out")
- */
 fail :: String -> Parser a
 export fail = (err) => Parser(() => Left(err))
 
 
-/**
- * Functor instance of the argv parser. It maps over the value contained
- * in the parser
- *
- * @since 0.11.0
- * @example
- * map((x) => x + 1, succeed(4)) // succeed(5)
- */
 instance Functor Parser {
   map = (f, parser) => Parser(
     (input) => where(parser) {
@@ -203,13 +211,7 @@ instance Functor Parser {
 }
 
 
-/**
- * Applicative instance of the argv parser.
- *
- * @since 0.11.0
- * @example
- * ap(pure((x) => x + 1), succeed(4)) // succeed(5)
- */
+
 instance Applicative Parser {
   ap = (mf, parser) => Parser(
     (input) => where(mf) {
@@ -253,13 +255,6 @@ instance Monad Parser {
 }
 
 
-/**
- * String parser, it parses a argv string of the form "string content"
- *
- * @since 0.11.0
- * @example
- * parse(string, `"Argv string"`) // Right("Argv string")
- */
 string :: Parser String
 export string = Parser(
   (input) => where(input) {
@@ -271,14 +266,6 @@ export string = Parser(
   },
 )
 
-
-/**
- * Integer parser, it parses an integer of the form 33
- *
- * @since 0.11.0
- * @example
- * parse(integer, `4`) // Right(4)
- */
 integer :: Parser Integer
 export integer = Parser(
   (input) => where(input) {
@@ -290,14 +277,6 @@ export integer = Parser(
   },
 )
 
-
-/**
- * Float parser, it parses an integer of the form 33.3
- *
- * @since 0.11.0
- * @example
- * parse(float, `33.3`) // Right(33.3)
- */
 float :: Parser Float
 export float = Parser(
   (input) => where(input) {
@@ -309,16 +288,6 @@ export float = Parser(
   },
 )
 
-
-/**
- * Boolean parser, it parses the value true or false
- *
- * @since 0.11.0
- * @example
- * parse(boolean, `true`)    // Right(true)
- * parse(boolean, `false`)   // Right(false)
- * parse(boolean, `"false"`) // Left("Error parsing boolean")
- */
 boolean :: Parser Boolean
 export boolean = Parser(
   (input) => where(input) {
@@ -330,29 +299,19 @@ export boolean = Parser(
   },
 )
 
+// list :: Parser a -> Parser (List a)
+// export list = (parser) => Parser(
+//   (input) => where(input) {
+//     ArgvArray(arr) =>
+//       where(parser) {
+//         Parser(parserFn) =>
+//           List.mapM(parserFn, arr)
+//       }
 
-/**
- * List parser, it parses a argv list of the form [value1, value2].
- * The list must be homogenous and the parser given as a parameter
- * must match the type of what the list contains.
- *
- * @since 0.11.0
- * @example
- * parse(list(string), `["one string", "two strings"]`)
- */
-list :: Parser a -> Parser (List a)
-export list = (parser) => Parser(
-  (input) => where(input) {
-    ArgvArray(arr) =>
-      where(parser) {
-        Parser(parserFn) =>
-          List.mapM(parserFn, arr)
-      }
-
-    _ =>
-      Left("Error parsing list")
-  },
-)
+//     _ =>
+//       Left("Error parsing list")
+//   },
+// )
 
 
 

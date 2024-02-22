@@ -1,15 +1,14 @@
 import { Left, Right } from "Either"
 import { assertEquals, test } from "Test"
 
-import { parse } from "@/Parser"
+import P from "@/Parser"
 
 
 
 test("smoke test", (_) => assertEquals(1000, 1000))
 
-test(
-  "parse - success",
-  (_) => assertEquals(parse(flagWithValue, `--cool=2024`), Right(["cool", "2024"])),
-)
+test("parse - boolean", (_) => assertEquals(P.parse(P.boolean, `true`), Right(true)))
+
+test("parse - success", (_) => assertEquals(P.parse(P.argvFlag, `--cool`), Right(["cool"])))
 
 // test("parse - error", () => assertEquals(parse(string, `3`), Left("Error parsing string")))

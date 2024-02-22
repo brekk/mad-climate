@@ -14,13 +14,12 @@ import {
   Repeatable,
 } from "@/Argv"
 import { help } from "@/Help"
-import { parse } from "@/Parser"
+import P from "@/Parser"
 
 
 
 main = () => {
-  // I seem to have messed up which Parser we're talking about
-  // IO.trace("HEY", parse(flagWithValue, "--cool=2024"))
+  IO.trace("HEY", P.parse(P.argvFlag, "--cool"))
   cli = Configuration(
     "my-cool-cli",
     "A super excellent command line interface!",
