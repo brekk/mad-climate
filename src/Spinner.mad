@@ -1,0 +1,175 @@
+import type { Error } from "File"
+import type { Wish } from "Wish"
+
+import IO from "IO"
+import List from "List"
+import Math from "Math"
+import Maybe from "Maybe"
+import String from "String"
+import Wish from "Wish"
+
+
+
+type TimerId = TimerId
+type IntervalId = IntervalId
+
+#iftarget js
+
+setInterval :: Integer -> ({} -> {}) -> Integer
+setInterval = (ms, cb) => #- setInterval(cb, ms) -#
+
+clearInterval :: Integer -> {}
+clearInterval = (n) => #- clearInterval(n) -#
+
+setTimeout :: ({} -> {}) -> Integer -> TimerId
+setTimeout = (cb, ms) => #- setTimeout(cb, ms) -#
+
+clearTimeout :: TimerId -> {}
+clearTimeout = (id) => #- clearTimeout(id) -#
+
+#elseif llvm
+
+setTimeout :: ({} -> {}) -> Integer -> TimerId
+setTimeout = extern "__setTimeout__"
+
+clearTimeout :: TimerId -> {}
+clearTimeout = extern "__clearTimeout__"
+
+#endif
+
+
+
+// #elseif llvm
+
+// setTimeout :: ({} -> {}) -> Integer -> TimerId
+// setTimeout = extern "__setTimeout__"
+
+// clearTimeout :: TimerId -> {}
+// clearTimeout =  extern "__clearTimeout__"
+
+#endif
+
+animateFrames :: List String -> Integer -> {}
+animateFrames = (frames, n) => pipe(
+  List.nth(n),
+  Maybe.fromMaybe(""),
+  IO.put,
+)(frames)
+
+spinner :: Integer -> List String -> Wish a b -> Wish a b
+export spinner = (interval, frames, wish) => Wish.Wish(
+  (badCB, goodCB) => {
+    i = -1
+    anim = animateFrames(frames)
+    go :: {} -> {}
+    go = () => do {
+      i = Math.mod(i + 1, List.length(frames))
+      anim(i)
+      return {}
+    }
+    iter = setInterval(interval, go)
+    kill = (a) => {
+      IO.log("KILLING")
+      clearInterval(iter)
+      return a
+    }
+    chain(
+      pipe(
+        kill,
+        of,
+      ),
+      wish,
+    )
+    return () => {
+      kill()
+    }
+  },
+)
+
+FRAMESET = [' ', '▁', '▃', '▄', '▅', '▆', '▇']
+
+COOL_FRAMES = [
+  `          `,
+  `▁         `,
+  `▃         `,
+  `▄         `,
+  `▅         `,
+  `▆         `,
+  `▇         `,
+  `█▁        `,
+  `█▃        `,
+  `█▄        `,
+  `█▅        `,
+  `█▆        `,
+  `██▁       `,
+  `██▃       `,
+  `██▄       `,
+  `██▅       `,
+  `██▆       `,
+  `███▁      `,
+  `███▃      `,
+  `███▄      `,
+  `███▅      `,
+  `███▆      `,
+  `████▆     `,
+  `█████▁    `,
+  `█████▃    `,
+  `█████▄    `,
+  `█████▅    `,
+  `█████▆    `,
+  `██████▆   `,
+  `███████▁  `,
+  `███████▃  `,
+  `███████▄  `,
+  `███████▅  `,
+  `███████▆  `,
+  `████████▁ `,
+  `████████▃ `,
+  `████████▄ `,
+  `████████▅ `,
+  `████████▆ `,
+  `█████████ `,
+  `█████████▁`,
+  `█████████▃`,
+  `█████████▄`,
+  `█████████▅`,
+  `█████████▆`,
+  `██████████`,
+  ` █████████`,
+  `  ████████`,
+  `   ███████`,
+  `    ██████`,
+  `     █████`,
+  `      ████`,
+  `       ███`,
+  `        ██`,
+  `         █`,
+  `          `,
+]
+
+// traceDrop :: Show a => String -> a -> a
+traceDrop = (a, b) => {
+  IO.trace(a, b)
+}
+
+
+delay :: Integer -> Wish e a -> Wish e a
+export delay = (time, wish) => Wish.Wish(
+  (bad2, good2) => {
+    id = TimerId
+    where(wish) {
+      Wish.Wish(run) =>
+        run(bad2, (a) => { id = setTimeout(() => { good2(a) }, time) })
+    }
+    return () => {
+      clearTimeout(id)
+    }
+  },
+)
+
+main = () => {
+  pipe(
+    delay(1000),
+    Wish.fulfill(traceDrop("BAD"), traceDrop("GOOD")),
+  )(spinner(30, COOL_FRAMES, of("COOL")))
+}

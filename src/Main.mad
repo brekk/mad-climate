@@ -19,7 +19,7 @@ import P from "@/Parser"
 
 
 main = () => {
-  IO.trace("HEY", P.parse(P.argvFlag, "--cool"))
+  IO.trace("HEY", P.parse(P.string, "'cool'"))
   cli = Configuration(
     "my-cool-cli",
     "A super excellent command line interface!",

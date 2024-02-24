@@ -155,7 +155,7 @@ argvValue :: Parse.Parser Value
 export argvValue = do {
   _ <- alt(spaces, pure([]))
 
-  return choice([argvFloat, argvInteger, argvBoolean, argvString, argvFlag])
+  return choice([argvFloat, argvInteger, argvBoolean, argvString])
 }
 
 
