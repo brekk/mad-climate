@@ -1,5 +1,6 @@
 import type { Configuration, Instruction } from "@/Argv"
 
+import { Right } from "Either"
 import IO from "IO"
 
 import {
@@ -13,6 +14,7 @@ import {
   Modal,
   Repeatable,
 } from "@/Argv"
+import Funk from "@/Fn"
 import { help } from "@/Help"
 import P from "@/Parser"
 

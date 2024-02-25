@@ -4,7 +4,8 @@ import type { Wish } from "Wish"
 import IO from "IO"
 import List from "List"
 import Math from "Math"
-import Maybe from "Maybe"
+import { Just, Nothing } from "Maybe"
+import S from "Stream"
 import String from "String"
 import Wish from "Wish"
 
@@ -26,6 +27,9 @@ setTimeout = (cb, ms) => #- setTimeout(cb, ms) -#
 
 clearTimeout :: TimerId -> {}
 clearTimeout = (id) => #- clearTimeout(id) -#
+
+clearConsole :: {} -> {}
+clearConsole = () => #- console.clear() -#
 
 #elseif llvm
 
@@ -49,44 +53,22 @@ clearTimeout = extern "__clearTimeout__"
 
 #endif
 
-animateFrames :: List String -> Integer -> {}
-animateFrames = (frames, n) => pipe(
-  List.nth(n),
-  Maybe.fromMaybe(""),
-  IO.put,
-)(frames)
+tap :: (a -> {}) -> a -> a
+tap = (f, x) => {
+  f(x)
+  return x
+}
 
-spinner :: Integer -> List String -> Wish a b -> Wish a b
-export spinner = (interval, frames, wish) => Wish.Wish(
-  (badCB, goodCB) => {
-    i = -1
-    anim = animateFrames(frames)
-    go :: {} -> {}
-    go = () => do {
-      i = Math.mod(i + 1, List.length(frames))
-      anim(i)
-      return {}
-    }
-    iter = setInterval(interval, go)
-    kill = (a) => {
-      IO.log("KILLING")
-      clearInterval(iter)
-      return a
-    }
-    chain(
-      pipe(
-        kill,
-        of,
-      ),
-      wish,
-    )
-    return () => {
-      kill()
-    }
-  },
-)
+identityVoid :: (a -> a) -> a -> {}
+identityVoid = (fn, x) => {
+  fn(x)
+}
 
-FRAMESET = [' ', '▁', '▃', '▄', '▅', '▆', '▇']
+saveCursor :: {} -> {}
+export saveCursor = () => IO.put("\x1b7")
+
+restoreCursor :: {} -> {}
+export restoreCursor = () => IO.put("\x1b8")
 
 COOL_FRAMES = [
   `          `,
@@ -147,29 +129,54 @@ COOL_FRAMES = [
   `          `,
 ]
 
-// traceDrop :: Show a => String -> a -> a
-traceDrop = (a, b) => {
-  IO.trace(a, b)
-}
+signal :: Integer -> List String -> Wish e a -> Wish e a
+signal = (interval, frames, wish) => Wish.Wish(
+  (badCB, goodCB) => {
+    frameCount = List.length(frames)
+    saveCursor()
+    stopSpinning = S.subscribe(
+      () => {},
+      (i) => {
+        restoreCursor()
+        where(List.nth(i % frameCount, frames)) {
+          Just(f) =>
+            IO.put(f)
 
-
-delay :: Integer -> Wish e a -> Wish e a
-export delay = (time, wish) => Wish.Wish(
-  (bad2, good2) => {
-    id = TimerId
+          _ =>
+            IO.put("")
+        }
+      },
+      () => {
+        stopSpinning()
+      },
+      S.interval(interval),
+    )
+    stop = (x) => {
+      stopSpinning()
+      return x
+    }
     where(wish) {
       Wish.Wish(run) =>
-        run(bad2, (a) => { id = setTimeout(() => { good2(a) }, time) })
+        run(
+          pipe(
+            stop,
+            badCB,
+          ),
+          pipe(
+            stop,
+            goodCB,
+          ),
+        )
     }
     return () => {
-      clearTimeout(id)
+      stopSpinning()
     }
   },
 )
 
 main = () => {
   pipe(
-    delay(1000),
-    Wish.fulfill(traceDrop("BAD"), traceDrop("GOOD")),
-  )(spinner(30, COOL_FRAMES, of("COOL")))
+    signal(30, COOL_FRAMES),
+    Wish.fulfill((e) => { IO.trace("BAD", e) }, (x) => { IO.trace("GOOD", x) }),
+  )(of("😎"))
 }

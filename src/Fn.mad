@@ -1,0 +1,45 @@
+import { Right } from "Either"
+import IO from "IO"
+
+
+
+tap :: (a -> {}) -> a -> a
+export tap = (f, x) => {
+  f(x)
+  return x
+}
+
+untap :: a -> {}
+export untap = (x) => {
+  return {}
+}
+main = () => {
+  IO.log("A very convoluted case of confusion")
+  pipe(
+    map(
+      pipe(
+        tap(
+          pipe(
+            mappend($, " the Hipster"),
+            IO.trace(`${IO.green("Goes")} to art school...                        `),
+            untap,
+          ),
+        ),
+        mappend($, " Frankenstein"),
+        IO.trace(`This story takes a ${IO.red("turn")}...                   `),
+        mappend($, "'s Monster"),
+        IO.trace(`"Making a man from old parts? ${IO.green("Great idea")}"... `),
+        tap(
+          pipe(
+            mappend("Husband of the Bride of "),
+            IO.trace("Gets " ++ IO.green("married") ++ "...                              "),
+            untap,
+          ),
+        ),
+      ),
+    ),
+    map(mappend("Doctor ")),
+    IO.trace("Gets " ++ IO.red("divorced") ++ ` and goes to ${IO.green("medical school")}...  `),
+    IO.cLog,
+  )(Right("Victor"))
+}
