@@ -12,6 +12,7 @@ import String from "String"
 import Wish from "Wish"
 
 import { tap, untap } from "@/Fn"
+import Term from "@/Terminal"
 
 
 
@@ -60,21 +61,22 @@ clearTimeout = extern "__clearTimeout__"
 
 saveCursor :: {} -> {}
 export saveCursor = () => {
-  #- console.clear() -#
-  IO.put("\x1b7")
+  IO.put(Term.CURSOR_SAVE)
 }
 
 restoreCursor :: {} -> {}
 export restoreCursor = () => {
-  IO.put("\x1b8")
+  IO.put(Term.CURSOR_RESTORE)
 }
 
-cursory :: String -> a -> a
-cursory = (x, a) => do {
-  saveCursor()
-  IO.putLine(x)
-  restoreCursor()
-  return a
+moveCursorToNextLine :: {} -> {}
+export moveCursorToNextLine = () => {
+  IO.put(Term.cursorNextLine(1))
+}
+
+eraseLine :: {} -> {}
+export eraseLine = () => {
+  IO.put(Term.ERASE_LINE)
 }
 
 COOL_FRAMES = [
@@ -136,31 +138,63 @@ COOL_FRAMES = [
   `          `,
 ]
 
-// type Spinner e a = Spinner(Stream e a, String)
-// alias FrameStream = { quit :: a -> a, stop :: {} -> {} }
+type SpinnerStatus = Waiting | Failed | Succeeded
+alias Statuses = #[String, String, String]
 
-enspin :: Integer -> List String -> {} -> {}
-enspin = (framerate, frames) => {
+enspin :: Integer -> List String -> Statuses -> {} -> {}
+enspin = (framerate, frames, statuses) => {
   frameCount = List.length(frames)
   saveCursor()
   next = (i) => {
     restoreCursor()
     where(List.nth(i % frameCount, frames)) {
       Just(f) =>
-        IO.put(f)
+        where(statuses) {
+          #[waiting, _, _] =>
+            do {
+              IO.put(f ++ " " ++ waiting)
+            }
 
-      _ =>
-        IO.put("")
+          _ =>
+            IO.put("")
+        }
     }
   }
-  stop = subscribe(() => {}, next, () => { stop() }, interval(framerate))
+  end = (spinnerStatus) => do {
+    eraseLine()
+    // restoreCursor()
+    moveCursorToNextLine()
+    IO.trace("SPINSTAT", spinnerStatus)
+    return where(#[spinnerStatus, statuses]) {
+      #[Failed, #[_, failed, _]] =>
+        IO.putLine("𐄂 " ++ failed ++ "\n")
+
+      #[Succeeded, #[_, _, succeeded]] =>
+        IO.putLine("✔ " ++ succeeded ++ "\n")
+
+      _ =>
+        IO.put("\n")
+    }
+  }
+  stop = subscribe(
+    () => {
+      stop()
+      end(Failed)
+    },
+    next,
+    () => {
+      stop()
+      end(Succeeded)
+    },
+    interval(framerate),
+  )
   return stop
 }
 
 
-spinner :: Integer -> List String -> Wish e a -> Wish e a
-spinner = (framerate, frames, wish) => {
-  stop = enspin(framerate, frames)
+spinner :: Integer -> List String -> Statuses -> Wish e a -> Wish e a
+spinner = (framerate, frames, statuses, wish) => {
+  stop = enspin(framerate, frames, statuses)
   return bimap(
     (e) => {
       stop()
@@ -211,11 +245,10 @@ parso = Json.map3(
 
 main = () => {
   pipe(
-    cursory("reading..."),
     File.read,
     map(Json.parse(parso)),
     delay(3000),
-    virtue,
+    virtue(#["Parsing file...", "Failed to parse!", "Parsed!"]),
     Wish.fulfill((e) => { IO.trace("BAD", e) }, (x) => { IO.log(x) }),
   )("./madlib.json")
 }

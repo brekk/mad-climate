@@ -1,0 +1,277 @@
+import String from "String"
+
+
+
+ESC = `\x1b`
+
+// via https://en.wikipedia.org/wiki/ANSI_escape_code
+
+/**
+ * Ansi styles to be used with the ansiColor function.
+ *
+ * @since 0.11.0
+ */
+export GRAPHICS = {
+  Reset: "0",
+  Bold: "1",
+  Dim: "2",
+  Italic: "3",
+  Underline: "4",
+  Blinking: "5",
+  Invert: "7",
+  Hidden: "8",
+  NoBold: "21",
+  NoDim: "22",
+  NoItalic: "23",
+  NoUnderline: "24",
+  NoBlinking: "25",
+  NoInvert: "27",
+  NoHidden: "28",
+  FGBlack: "30",
+  FGRed: "31",
+  FGGreen: "32",
+  FGYellow: "33",
+  FGBlue: "34",
+  FGMagenta: "35",
+  FGCyan: "36",
+  FGWhite: "37",
+  FGBrightBlack: "90",
+  FGBrightRed: "91",
+  FGBrightGreen: "92",
+  FGBrightYellow: "93",
+  FGBrightBlue: "94",
+  FGBrightMagenta: "95",
+  FGBrightCyan: "96",
+  FGBrightWhite: "97",
+  BGBlack: "40",
+  BGRed: "41",
+  BGGreen: "42",
+  BGYellow: "43",
+  BGBlue: "44",
+  BGMagenta: "45",
+  BGCyan: "46",
+  BGWhite: "47",
+  BGBrightBlack: "100",
+  BGBrightRed: "101",
+  BGBrightGreen: "102",
+  BGBrightYellow: "103",
+  BGBrightBlue: "104",
+  BGBrightMagenta: "105",
+  BGBrightCyan: "106",
+  BGBrightWhite: "107",
+}
+
+// ANSI constant names for functions!
+export ANSI_FN = {
+  // unary
+  CursorUp: "A",
+  CursorDown: "B",
+  CursorForward: "C",
+  CursorBack: "D",
+  CursorNextLine: "E",
+  CursorPrevLine: "F",
+  CursorMoveCol: "G",
+  EraseInDisplay: "J",
+  EraseInLine: "K",
+  ScrollUp: "S",
+  ScrollDown: "T",
+  // binary 
+  CursorMove: "H",
+  // nullary
+  CursorSave: "s",
+  CursorRestore: "u",
+  // n-ary
+  GraphicsMode: "m",
+}
+// 6n ? CURSOR_REQUEST_POSITION
+
+ansiSeq :: Boolean -> String -> List String -> String
+export ansiSeq = (invoke, fn, parts) => ESC ++ (invoke ? "[" : "") ++ String.join(";", parts) ++ fn
+export ansiFn = ansiSeq(true)
+export ansiCall = ansiSeq(false)
+
+type EraseMode = EraseInDisplay | EraseInLine
+type EraseDirective = EraseToEnd | EraseToBeginning | EraseAll | EraseHistory
+type EraseCommand = EraseCommand(EraseMode, EraseDirective)
+
+export ERASER = { ToEnd: "0", ToBeginning: "1", All: "2", History: "3" }
+
+erase :: EraseMode -> EraseDirective -> String
+erase = (mode, dir) => where(#[mode, dir]) {
+  #[EraseInDisplay, EraseToEnd] =>
+    ansiFn(ANSI_FN.EraseInDisplay, [ERASER.ToEnd])
+
+  #[EraseInDisplay, EraseToBeginning] =>
+    ansiFn(ANSI_FN.EraseInDisplay, [ERASER.ToBeginning])
+
+  #[EraseInDisplay, EraseAll] =>
+    ansiFn(ANSI_FN.EraseInDisplay, [ERASER.All])
+
+  #[EraseInDisplay, EraseHistory] =>
+    ansiFn(ANSI_FN.EraseInDisplay, [ERASER.History])
+
+  #[EraseInLine, EraseToEnd] =>
+    ansiFn(ANSI_FN.EraseInLine, [ERASER.ToEnd])
+
+  #[EraseInLine, EraseToBeginning] =>
+    ansiFn(ANSI_FN.EraseInLine, [ERASER.ToBeginning])
+
+  #[EraseInLine, EraseToEnd] =>
+    ansiFn(ANSI_FN.EraseInLine, [ERASER.All])
+
+  _ =>
+    ""
+}
+eLine = erase(EraseInLine)
+eDisplay = erase(EraseInDisplay)
+
+export ERASE_TO_EOL = eLine(EraseToEnd)
+export ERASE_TO_BOL = eLine(EraseToBeginning)
+export ERASE_LINE = eLine(EraseAll)
+
+export ERASE_TO_EOD = eDisplay(EraseToEnd)
+export ERASE_TO_BOD = eDisplay(EraseToBeginning)
+export ERASE_DISPLAY = eDisplay(EraseAll)
+export ERASE_HISTORY = eDisplay(EraseHistory)
+
+type CursorAction
+  = CursorUp
+  | CursorDown
+  | CursorForward
+  | CursorBack
+  | CursorNextLine
+  | CursorPrevLine
+  | CursorMoveColumn
+  | CursorSave
+  | CursorRestore
+  | CursorMove
+
+
+cursorUnary :: CursorAction -> Integer -> String
+cursorUnary = (cursor, x) => do {
+  y = show(x)
+  call = ansiFn($, [y])
+  return where(cursor) {
+    CursorUp =>
+      call(ANSI_FN.CursorUp)
+
+    CursorDown =>
+      call(ANSI_FN.CursorDown)
+
+    CursorForward =>
+      call(ANSI_FN.CursorForward)
+
+    CursorBack =>
+      call(ANSI_FN.CursorBack)
+
+    CursorNextLine =>
+      call(ANSI_FN.CursorNextLine)
+
+    CursorPrevLine =>
+      call(ANSI_FN.CursorPrevLine)
+
+    CursorMoveColumn =>
+      call(ANSI_FN.CursorMoveCol)
+
+    _ =>
+      ""
+  }
+}
+export cursorUp = cursorUnary(CursorUp)
+export cursorDown = cursorUnary(CursorDown)
+export cursorForward = cursorUnary(CursorForward)
+export cursorBack = cursorUnary(CursorBack)
+export cursorNextLine = cursorUnary(CursorNextLine)
+export cursorPrevLine = cursorUnary(CursorPrevLine)
+export cursorMoveColumn = cursorUnary(CursorMoveColumn)
+
+cursorBinary :: CursorAction -> Integer -> Integer -> String
+cursorBinary = (cursor, x, y) => do {
+  x2 = show(x)
+  y2 = show(y)
+  call = ansiFn($, [x2, y2])
+  return where(cursor) {
+    CursorMove =>
+      call(ANSI_FN.CursorMove)
+
+    _ =>
+      ""
+  }
+}
+export cursorMove = cursorBinary(CursorMove)
+
+cursorNullary :: CursorAction -> String
+cursorNullary = (cursor) => {
+  call = ansiFn($, [])
+  return where(cursor) {
+    CursorSave =>
+      call(ANSI_FN.CursorSave)
+
+    CursorRestore =>
+      call(ANSI_FN.CursorRestore)
+  }
+}
+export CURSOR_SAVE = cursorNullary(CursorSave)
+export CURSOR_RESTORE = cursorNullary(CursorRestore)
+
+export encolor = ansiFn(ANSI_FN.GraphicsMode)
+END_COLOR = encolor([GRAPHICS.Reset])
+
+/**
+ * Adds ansi escape codes to a string given a list of styles.
+ *
+ * @since 0.11.0
+ * @example
+ * ansiColor([GRAPHICS.Bold, GRAPHICS.FGBrightRed], "will be red and bold")
+ */
+ansiColor :: List String -> String -> String
+export ansiColor = (parts, str) => (encolor(parts) ++ str ++ END_COLOR)
+
+export text = {
+  black: ansiColor([GRAPHICS.FGBlack]),
+  red: ansiColor([GRAPHICS.FGRed]),
+  green: ansiColor([GRAPHICS.FGGreen]),
+  yellow: ansiColor([GRAPHICS.FGYellow]),
+  blue: ansiColor([GRAPHICS.FGBlue]),
+  magenta: ansiColor([GRAPHICS.FGMagenta]),
+  cyan: ansiColor([GRAPHICS.FGCyan]),
+  white: ansiColor([GRAPHICS.FGWhite]),
+  brightBlack: ansiColor([GRAPHICS.FGBrightBlack]),
+  brightRed: ansiColor([GRAPHICS.FGBrightRed]),
+  brightGreen: ansiColor([GRAPHICS.FGBrightGreen]),
+  brightYellow: ansiColor([GRAPHICS.FGBrightYellow]),
+  brightBlue: ansiColor([GRAPHICS.FGBrightBlue]),
+  brightMagenta: ansiColor([GRAPHICS.FGBrightMagenta]),
+  brightCyan: ansiColor([GRAPHICS.FGBrightCyan]),
+  brightWhite: ansiColor([GRAPHICS.FGBrightWhite]),
+  underline: ansiColor([GRAPHICS.Underline]),
+  bold: ansiColor([GRAPHICS.Bold]),
+  boldUnderline: ansiColor([GRAPHICS.Bold, GRAPHICS.Underline]),
+  // new!
+  blink: ansiColor([GRAPHICS.Blinking]),
+  noBlink: ansiColor([GRAPHICS.NoBlinking]),
+  underline: ansiColor([GRAPHICS.Underline]),
+  noUnderline: ansiColor([GRAPHICS.NoUnderline]),
+}
+
+export dark = {
+  black: ansiColor([GRAPHICS.FGBlack, GRAPHICS.BGBlack]),
+  red: ansiColor([GRAPHICS.FGRed, GRAPHICS.BGBlack]),
+  green: ansiColor([GRAPHICS.FGGreen, GRAPHICS.BGBlack]),
+  yellow: ansiColor([GRAPHICS.FGYellow, GRAPHICS.BGBlack]),
+  blue: ansiColor([GRAPHICS.FGBlue, GRAPHICS.BGBlack]),
+  magenta: ansiColor([GRAPHICS.FGMagenta, GRAPHICS.BGBlack]),
+  cyan: ansiColor([GRAPHICS.FGCyan, GRAPHICS.BGBlack]),
+  white: ansiColor([GRAPHICS.FGWhite, GRAPHICS.BGBlack]),
+}
+
+export light = {
+  black: ansiColor([GRAPHICS.FGBrightBlack, GRAPHICS.BGWhite]),
+  red: ansiColor([GRAPHICS.FGBrightRed, GRAPHICS.BGWhite]),
+  green: ansiColor([GRAPHICS.FGBrightGreen, GRAPHICS.BGWhite]),
+  yellow: ansiColor([GRAPHICS.FGBrightYellow, GRAPHICS.BGWhite]),
+  blue: ansiColor([GRAPHICS.FGBrightBlue, GRAPHICS.BGWhite]),
+  magenta: ansiColor([GRAPHICS.FGBrightMagenta, GRAPHICS.BGWhite]),
+  cyan: ansiColor([GRAPHICS.FGBrightCyan, GRAPHICS.BGWhite]),
+  white: ansiColor([GRAPHICS.FGBrightWhite, GRAPHICS.BGWhite]),
+}
