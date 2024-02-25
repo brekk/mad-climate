@@ -65,10 +65,15 @@ identityVoid = (fn, x) => {
 }
 
 saveCursor :: {} -> {}
-export saveCursor = () => IO.put("\x1b7")
+export saveCursor = () => {
+  #- console.clear() -#
+  IO.put("\x1b7")
+}
 
 restoreCursor :: {} -> {}
-export restoreCursor = () => IO.put("\x1b8")
+export restoreCursor = () => {
+  IO.put("\x1b8")
+}
 
 COOL_FRAMES = [
   `          `,
@@ -174,9 +179,27 @@ signal = (interval, frames, wish) => Wish.Wish(
   },
 )
 
+
+delay :: Integer -> Wish e a -> Wish e a
+export delay = (time, wish) => Wish.Wish(
+  (bad, good) => {
+    id = TimerId
+    where(wish) {
+      Wish.Wish(run) =>
+        run(bad, (a) => { id = setTimeout(() => { good(a) }, time) })
+    }
+    return () => {
+      clearTimeout(id)
+    }
+  },
+)
+
+virtue = signal(30, COOL_FRAMES)
+
 main = () => {
   pipe(
-    signal(30, COOL_FRAMES),
-    Wish.fulfill((e) => { IO.trace("BAD", e) }, (x) => { IO.trace("GOOD", x) }),
+    delay(3000),
+    virtue,
+    Wish.fulfill((e) => { IO.trace("BAD", e) }, (x) => { IO.log(x) }),
   )(of("😎"))
 }
