@@ -1,13 +1,17 @@
 import type { Error } from "File"
 import type { Wish } from "Wish"
 
+import File from "File"
 import IO from "IO"
+import Json from "Json/Parse"
 import List from "List"
 import Math from "Math"
 import { Just, Nothing } from "Maybe"
-import S from "Stream"
+import { interval, subscribe } from "Stream"
 import String from "String"
 import Wish from "Wish"
+
+import { tap, untap } from "@/Fn"
 
 
 
@@ -53,16 +57,6 @@ clearTimeout = extern "__clearTimeout__"
 
 #endif
 
-tap :: (a -> {}) -> a -> a
-tap = (f, x) => {
-  f(x)
-  return x
-}
-
-identityVoid :: (a -> a) -> a -> {}
-identityVoid = (fn, x) => {
-  fn(x)
-}
 
 saveCursor :: {} -> {}
 export saveCursor = () => {
@@ -73,6 +67,14 @@ export saveCursor = () => {
 restoreCursor :: {} -> {}
 export restoreCursor = () => {
   IO.put("\x1b8")
+}
+
+cursory :: String -> a -> a
+cursory = (x, a) => do {
+  saveCursor()
+  IO.putLine(x)
+  restoreCursor()
+  return a
 }
 
 COOL_FRAMES = [
@@ -134,50 +136,44 @@ COOL_FRAMES = [
   `          `,
 ]
 
-signal :: Integer -> List String -> Wish e a -> Wish e a
-signal = (interval, frames, wish) => Wish.Wish(
-  (badCB, goodCB) => {
-    frameCount = List.length(frames)
-    saveCursor()
-    stopSpinning = S.subscribe(
-      () => {},
-      (i) => {
-        restoreCursor()
-        where(List.nth(i % frameCount, frames)) {
-          Just(f) =>
-            IO.put(f)
+// type Spinner e a = Spinner(Stream e a, String)
+// alias FrameStream = { quit :: a -> a, stop :: {} -> {} }
 
-          _ =>
-            IO.put("")
-        }
-      },
-      () => {
-        stopSpinning()
-      },
-      S.interval(interval),
-    )
-    stop = (x) => {
-      stopSpinning()
+enspin :: Integer -> List String -> {} -> {}
+enspin = (framerate, frames) => {
+  frameCount = List.length(frames)
+  saveCursor()
+  next = (i) => {
+    restoreCursor()
+    where(List.nth(i % frameCount, frames)) {
+      Just(f) =>
+        IO.put(f)
+
+      _ =>
+        IO.put("")
+    }
+  }
+  stop = subscribe(() => {}, next, () => { stop() }, interval(framerate))
+  return stop
+}
+
+
+spinner :: Integer -> List String -> Wish e a -> Wish e a
+spinner = (framerate, frames, wish) => {
+  stop = enspin(framerate, frames)
+  return bimap(
+    (e) => {
+      stop()
+      return e
+    },
+    (x) => {
+      stop()
       return x
-    }
-    where(wish) {
-      Wish.Wish(run) =>
-        run(
-          pipe(
-            stop,
-            badCB,
-          ),
-          pipe(
-            stop,
-            goodCB,
-          ),
-        )
-    }
-    return () => {
-      stopSpinning()
-    }
-  },
-)
+    },
+  )(wish)
+}
+
+
 
 
 delay :: Integer -> Wish e a -> Wish e a
@@ -194,12 +190,32 @@ export delay = (time, wish) => Wish.Wish(
   },
 )
 
-virtue = signal(30, COOL_FRAMES)
+virtue = spinner(30, COOL_FRAMES)
+
+type MadlibJson
+  = MadlibJson({
+    // importAliases :: Maybe #[String, String],
+    main :: String,
+    name :: String,
+    version :: String,
+  })
+
+parso = Json.map3(
+  (name, version, m) => MadlibJson({ name, version, main: m }),
+  Json.field("name", Json.string),
+  Json.field("version", Json.string),
+  Json.field("main", Json.string),
+)
+// Json.field("importAliases", Json.maybe(J.lazy((_) => parso))),
+
 
 main = () => {
   pipe(
+    cursory("reading..."),
+    File.read,
+    map(Json.parse(parso)),
     delay(3000),
     virtue,
     Wish.fulfill((e) => { IO.trace("BAD", e) }, (x) => { IO.log(x) }),
-  )(of("😎"))
+  )("./madlib.json")
 }
