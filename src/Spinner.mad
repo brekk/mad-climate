@@ -161,9 +161,10 @@ enspin = (framerate, frames, statuses) => {
     }
   }
   end = (spinnerStatus) => do {
+    restoreCursor()
     eraseLine()
-    // restoreCursor()
-    moveCursorToNextLine()
+    // moveCursorToNextLine()
+    // IO.put("\n")
     IO.trace("SPINSTAT", spinnerStatus)
     return where(#[spinnerStatus, statuses]) {
       #[Failed, #[_, failed, _]] =>
@@ -248,7 +249,7 @@ main = () => {
     File.read,
     map(Json.parse(parso)),
     delay(3000),
-    virtue(#["Parsing file...", "Failed to parse!", "Parsed!"]),
+    virtue(#[Term.text.underline("Parsing file..."), "Failed to parse!", "Parsed!"]),
     Wish.fulfill((e) => { IO.trace("BAD", e) }, (x) => { IO.log(x) }),
   )("./madlib.json")
 }

@@ -1,4 +1,11 @@
+import { always } from "Function"
+import IO from "IO"
+import List from "List"
 import String from "String"
+
+
+
+K = always
 
 
 
@@ -11,7 +18,7 @@ ESC = `\x1b`
  *
  * @since 0.11.0
  */
-export GRAPHICS = {
+gfx = {
   Reset: "0",
   Bold: "1",
   Dim: "2",
@@ -60,6 +67,7 @@ export GRAPHICS = {
   BGBrightCyan: "106",
   BGBrightWhite: "107",
 }
+export GRAPHICS = gfx
 
 // ANSI constant names for functions!
 export ANSI_FN = {
@@ -85,54 +93,89 @@ export ANSI_FN = {
 }
 // 6n ? CURSOR_REQUEST_POSITION
 
+export type EscapeSequence = Escape(Boolean, String, List String)
+export type Color = Color(List String)
+
 ansiSeq :: Boolean -> String -> List String -> String
 export ansiSeq = (invoke, fn, parts) => ESC ++ (invoke ? "[" : "") ++ String.join(";", parts) ++ fn
 export ansiFn = ansiSeq(true)
 export ansiCall = ansiSeq(false)
 
-type EraseMode = EraseInDisplay | EraseInLine
-type EraseDirective = EraseToEnd | EraseToBeginning | EraseAll | EraseHistory
-type EraseCommand = EraseCommand(EraseMode, EraseDirective)
+escapeToString :: EscapeSequence -> String
+export escapeToString = where {
+  Escape(invoke, fn, parts) =>
+    ansiSeq(invoke, fn, parts)
+}
 
-export ERASER = { ToEnd: "0", ToBeginning: "1", All: "2", History: "3" }
+colorToEscape :: Color -> EscapeSequence
+export colorToEscape = where {
+  Color(styles) =>
+    Escape(true, ANSI_FN.GraphicsMode, styles)
+}
+
+export type EraseMode = EraseInDisplay | EraseInLine
+export type EraseDirective = EraseToEnd | EraseToBeginning | EraseAll | EraseHistory
+export type Eraser = Eraser(EraseMode, EraseDirective)
+export EraserDisplay = Eraser(EraseInDisplay)
+export EraserLine = Eraser(EraseInLine)
+
+export ERASER_LITERAL = { ToEnd: "0", ToBeginning: "1", All: "2", History: "3" }
 
 erase :: EraseMode -> EraseDirective -> String
 erase = (mode, dir) => where(#[mode, dir]) {
   #[EraseInDisplay, EraseToEnd] =>
-    ansiFn(ANSI_FN.EraseInDisplay, [ERASER.ToEnd])
+    ansiFn(ANSI_FN.EraseInDisplay, [ERASER_LITERAL.ToEnd])
 
   #[EraseInDisplay, EraseToBeginning] =>
-    ansiFn(ANSI_FN.EraseInDisplay, [ERASER.ToBeginning])
+    ansiFn(ANSI_FN.EraseInDisplay, [ERASER_LITERAL.ToBeginning])
 
   #[EraseInDisplay, EraseAll] =>
-    ansiFn(ANSI_FN.EraseInDisplay, [ERASER.All])
+    ansiFn(ANSI_FN.EraseInDisplay, [ERASER_LITERAL.All])
 
   #[EraseInDisplay, EraseHistory] =>
-    ansiFn(ANSI_FN.EraseInDisplay, [ERASER.History])
+    ansiFn(ANSI_FN.EraseInDisplay, [ERASER_LITERAL.History])
 
   #[EraseInLine, EraseToEnd] =>
-    ansiFn(ANSI_FN.EraseInLine, [ERASER.ToEnd])
+    ansiFn(ANSI_FN.EraseInLine, [ERASER_LITERAL.ToEnd])
 
   #[EraseInLine, EraseToBeginning] =>
-    ansiFn(ANSI_FN.EraseInLine, [ERASER.ToBeginning])
+    ansiFn(ANSI_FN.EraseInLine, [ERASER_LITERAL.ToBeginning])
 
   #[EraseInLine, EraseToEnd] =>
-    ansiFn(ANSI_FN.EraseInLine, [ERASER.All])
+    ansiFn(ANSI_FN.EraseInLine, [ERASER_LITERAL.All])
+
+  // EraseLineHistory is not a thing!
 
   _ =>
     ""
 }
+eraserToString :: Eraser -> String
+export eraserToString = where {
+  Eraser(m, d) =>
+    erase(m, d)
+}
+
+enprint :: String -> {} -> {}
+export enprint = (str) => () => IO.put(str)
+
 eLine = erase(EraseInLine)
 eDisplay = erase(EraseInDisplay)
 
 export ERASE_TO_EOL = eLine(EraseToEnd)
 export ERASE_TO_BOL = eLine(EraseToBeginning)
 export ERASE_LINE = eLine(EraseAll)
-
 export ERASE_TO_EOD = eDisplay(EraseToEnd)
 export ERASE_TO_BOD = eDisplay(EraseToBeginning)
 export ERASE_DISPLAY = eDisplay(EraseAll)
 export ERASE_HISTORY = eDisplay(EraseHistory)
+
+export eraseLineToEnd = enprint(ERASE_TO_EOL)
+export eraseLineToBeginning = enprint(ERASE_TO_BOL)
+export eraseLine = enprint(ERASE_LINE)
+export eraseDisplayToEnd = enprint(ERASE_TO_EOD)
+export eraseDisplayToBeginning = enprint(ERASE_TO_BOD)
+export eraseDisplay = enprint(ERASE_DISPLAY)
+export eraseHistory = enprint(ERASE_HISTORY)
 
 type CursorAction
   = CursorUp
@@ -146,6 +189,17 @@ type CursorAction
   | CursorRestore
   | CursorMove
 
+cursorNullary :: CursorAction -> String
+cursorNullary = (cursor) => {
+  call = ansiFn($, [])
+  return where(cursor) {
+    CursorSave =>
+      call(ANSI_FN.CursorSave)
+
+    CursorRestore =>
+      call(ANSI_FN.CursorRestore)
+  }
+}
 
 cursorUnary :: CursorAction -> Integer -> String
 cursorUnary = (cursor, x) => do {
@@ -177,19 +231,10 @@ cursorUnary = (cursor, x) => do {
       ""
   }
 }
-export cursorUp = cursorUnary(CursorUp)
-export cursorDown = cursorUnary(CursorDown)
-export cursorForward = cursorUnary(CursorForward)
-export cursorBack = cursorUnary(CursorBack)
-export cursorNextLine = cursorUnary(CursorNextLine)
-export cursorPrevLine = cursorUnary(CursorPrevLine)
-export cursorMoveColumn = cursorUnary(CursorMoveColumn)
 
 cursorBinary :: CursorAction -> Integer -> Integer -> String
 cursorBinary = (cursor, x, y) => do {
-  x2 = show(x)
-  y2 = show(y)
-  call = ansiFn($, [x2, y2])
+  call = ansiFn($, map(show)([x, y]))
   return where(cursor) {
     CursorMove =>
       call(ANSI_FN.CursorMove)
@@ -198,80 +243,190 @@ cursorBinary = (cursor, x, y) => do {
       ""
   }
 }
-export cursorMove = cursorBinary(CursorMove)
 
-cursorNullary :: CursorAction -> String
-cursorNullary = (cursor) => {
-  call = ansiFn($, [])
-  return where(cursor) {
-    CursorSave =>
-      call(ANSI_FN.CursorSave)
-
-    CursorRestore =>
-      call(ANSI_FN.CursorRestore)
-  }
-}
 export CURSOR_SAVE = cursorNullary(CursorSave)
 export CURSOR_RESTORE = cursorNullary(CursorRestore)
 
-export encolor = ansiFn(ANSI_FN.GraphicsMode)
-END_COLOR = encolor([GRAPHICS.Reset])
+
+export cursorSeqUp = cursorUnary(CursorUp)
+export cursorSeqDown = cursorUnary(CursorDown)
+export cursorSeqForward = cursorUnary(CursorForward)
+export cursorSeqBack = cursorUnary(CursorBack)
+export cursorSeqNextLine = cursorUnary(CursorNextLine)
+export cursorSeqPrevLine = cursorUnary(CursorPrevLine)
+export cursorSeqMoveColumn = cursorUnary(CursorMoveColumn)
+
+export cursorUp = pipe(
+  cursorSeqUp,
+  enprint,
+)
+export cursorDown = pipe(
+  cursorSeqDown,
+  enprint,
+)
+export cursorForward = pipe(
+  cursorSeqForward,
+  enprint,
+)
+export cursorBack = pipe(
+  cursorSeqBack,
+  enprint,
+)
+export cursorNextLine = pipe(
+  cursorSeqNextLine,
+  enprint,
+)
+export cursorPrevLine = pipe(
+  cursorSeqPrevLine,
+  enprint,
+)
+export cursorMoveColumn = pipe(
+  cursorSeqMoveColumn,
+  enprint,
+)
+
+export cursorSeqMove = cursorBinary(CursorMove)
+export cursorMove = (x, y) => pipe(
+  cursorSeqMove(x),
+  enprint,
+)(y)
+
+export colorSeq = ansiFn(ANSI_FN.GraphicsMode)
+export END_COLOR = colorSeq([GRAPHICS.Reset])
 
 /**
- * Adds ansi escape codes to a string given a list of styles.
+ * Adds colors to a string given a list of styles, with a trailing style reset.
  *
  * @since 0.11.0
  * @example
  * ansiColor([GRAPHICS.Bold, GRAPHICS.FGBrightRed], "will be red and bold")
  */
 ansiColor :: List String -> String -> String
-export ansiColor = (parts, str) => (encolor(parts) ++ str ++ END_COLOR)
+export ansiColor = (parts, str) => (colorSeq(parts) ++ str ++ END_COLOR)
+
+alias StringTransform = String -> String
+
+alias PaletteKey = {
+  black :: StringTransform,
+  blue :: StringTransform,
+  cyan :: StringTransform,
+  green :: StringTransform,
+  magenta :: StringTransform,
+  red :: StringTransform,
+  white :: StringTransform,
+  yellow :: StringTransform,
+}
+
+alias Seq = List String
+
+type Palette = Palette(Seq, Seq, Seq, Seq, Seq, Seq, Seq, Seq)
+
+instance Semigroup Palette {
+  assoc = (p, q) => where(#[p, q]) {
+    #[Palette(k, b, c, g, m, r, w, y), Palette(k2, b2, c2, g2, m2, r2, w2, y2)] =>
+      Palette(
+        List.concat(k, k2),
+        List.concat(b, b2),
+        List.concat(c, c2),
+        List.concat(g, g2),
+        List.concat(m, m2),
+        List.concat(r, r2),
+        List.concat(w, w2),
+        List.concat(y, y2),
+      )
+  }
+}
+
+instance Monoid Palette {
+  mappend = assoc
+
+  mconcat = List.reduceLeft(assoc, mempty)
+
+  mempty = Palette([], [], [], [], [], [], [], [])
+}
+
+mix :: Seq -> Palette -> Palette
+mix = (toAdd, palette) => assoc(
+  Palette(toAdd, toAdd, toAdd, toAdd, toAdd, toAdd, toAdd, toAdd),
+  palette,
+)
+
+concretePalette :: Palette -> PaletteKey
+concretePalette = where {
+  Palette(black, blue, cyan, green, magenta, red, white, yellow) =>
+    (
+      {
+        black: K(String.join("", black)),
+        blue: K(String.join("", blue)),
+        cyan: K(String.join("", cyan)),
+        green: K(String.join("", green)),
+        magenta: K(String.join("", magenta)),
+        red: K(String.join("", red)),
+        white: K(String.join("", white)),
+        yellow: K(String.join("", yellow)),
+      }
+    )
+}
+
+mapConcretePalette :: (List String -> String -> String) -> Palette -> PaletteKey
+mapConcretePalette = (fn, pal) => where(pal) {
+  Palette(black, blue, cyan, green, magenta, red, white, yellow) =>
+    (
+      {
+        black: fn(black),
+        blue: fn(blue),
+        cyan: fn(cyan),
+        green: fn(green),
+        magenta: fn(magenta),
+        red: fn(red),
+        white: fn(white),
+        yellow: fn(yellow),
+      }
+    )
+}
+
+
+
+export paletteBase = Palette(
+  [gfx.FGBlack],
+  [gfx.FGBlue],
+  [gfx.FGCyan],
+  [gfx.FGGreen],
+  [gfx.FGMagenta],
+  [gfx.FGRed],
+  [gfx.FGWhite],
+  [gfx.FGYellow],
+)
+export paletteBright = Palette(
+  [gfx.FGBrightBlack],
+  [gfx.FGBrightBlue],
+  [gfx.FGBrightCyan],
+  [gfx.FGBrightGreen],
+  [gfx.FGBrightMagenta],
+  [gfx.FGBrightRed],
+  [gfx.FGBrightWhite],
+  [gfx.FGBrightYellow],
+)
+export paletteDark = mix([gfx.BGBlack], paletteBase)
+export paletteLight = mix([gfx.BGWhite], paletteBright)
+
+export base = mapConcretePalette(ansiColor, paletteBase)
+export dark = mapConcretePalette(ansiColor, paletteDark)
+export light = mapConcretePalette(ansiColor, paletteLight)
+export bright = mapConcretePalette(ansiColor, paletteBright)
+
+
+
 
 export text = {
-  black: ansiColor([GRAPHICS.FGBlack]),
-  red: ansiColor([GRAPHICS.FGRed]),
-  green: ansiColor([GRAPHICS.FGGreen]),
-  yellow: ansiColor([GRAPHICS.FGYellow]),
-  blue: ansiColor([GRAPHICS.FGBlue]),
-  magenta: ansiColor([GRAPHICS.FGMagenta]),
-  cyan: ansiColor([GRAPHICS.FGCyan]),
-  white: ansiColor([GRAPHICS.FGWhite]),
-  brightBlack: ansiColor([GRAPHICS.FGBrightBlack]),
-  brightRed: ansiColor([GRAPHICS.FGBrightRed]),
-  brightGreen: ansiColor([GRAPHICS.FGBrightGreen]),
-  brightYellow: ansiColor([GRAPHICS.FGBrightYellow]),
-  brightBlue: ansiColor([GRAPHICS.FGBrightBlue]),
-  brightMagenta: ansiColor([GRAPHICS.FGBrightMagenta]),
-  brightCyan: ansiColor([GRAPHICS.FGBrightCyan]),
-  brightWhite: ansiColor([GRAPHICS.FGBrightWhite]),
-  underline: ansiColor([GRAPHICS.Underline]),
-  bold: ansiColor([GRAPHICS.Bold]),
-  boldUnderline: ansiColor([GRAPHICS.Bold, GRAPHICS.Underline]),
-  // new!
-  blink: ansiColor([GRAPHICS.Blinking]),
-  noBlink: ansiColor([GRAPHICS.NoBlinking]),
-  underline: ansiColor([GRAPHICS.Underline]),
-  noUnderline: ansiColor([GRAPHICS.NoUnderline]),
-}
-
-export dark = {
-  black: ansiColor([GRAPHICS.FGBlack, GRAPHICS.BGBlack]),
-  red: ansiColor([GRAPHICS.FGRed, GRAPHICS.BGBlack]),
-  green: ansiColor([GRAPHICS.FGGreen, GRAPHICS.BGBlack]),
-  yellow: ansiColor([GRAPHICS.FGYellow, GRAPHICS.BGBlack]),
-  blue: ansiColor([GRAPHICS.FGBlue, GRAPHICS.BGBlack]),
-  magenta: ansiColor([GRAPHICS.FGMagenta, GRAPHICS.BGBlack]),
-  cyan: ansiColor([GRAPHICS.FGCyan, GRAPHICS.BGBlack]),
-  white: ansiColor([GRAPHICS.FGWhite, GRAPHICS.BGBlack]),
-}
-
-export light = {
-  black: ansiColor([GRAPHICS.FGBrightBlack, GRAPHICS.BGWhite]),
-  red: ansiColor([GRAPHICS.FGBrightRed, GRAPHICS.BGWhite]),
-  green: ansiColor([GRAPHICS.FGBrightGreen, GRAPHICS.BGWhite]),
-  yellow: ansiColor([GRAPHICS.FGBrightYellow, GRAPHICS.BGWhite]),
-  blue: ansiColor([GRAPHICS.FGBrightBlue, GRAPHICS.BGWhite]),
-  magenta: ansiColor([GRAPHICS.FGBrightMagenta, GRAPHICS.BGWhite]),
-  cyan: ansiColor([GRAPHICS.FGBrightCyan, GRAPHICS.BGWhite]),
-  white: ansiColor([GRAPHICS.FGBrightWhite, GRAPHICS.BGWhite]),
+  base,
+  bright,
+  dark,
+  light,
+  // text emphasis
+  underline: ansiColor([gfx.Underline]),
+  bold: ansiColor([gfx.Bold]),
+  italic: ansiColor([gfx.Italic]),
+  boldUnderline: ansiColor([gfx.Bold, gfx.Underline]),
+  emphatic: ansiColor([gfx.Bold, gfx.Underline, gfx.Italic]),
 }
