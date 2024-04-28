@@ -68,11 +68,12 @@ restoreCursor :: {} -> {}
 export restoreCursor = () => {
   IO.put(Term.CURSOR_RESTORE)
 }
-
+/*
 moveCursorToNextLine :: {} -> {}
 export moveCursorToNextLine = () => {
   IO.put(Term.cursorNextLine(1))
 }
+*/
 
 eraseLine :: {} -> {}
 export eraseLine = () => {
@@ -217,7 +218,7 @@ export delay = (time, wish) => Wish.Wish(
     id = TimerId
     where(wish) {
       Wish.Wish(run) =>
-        run(bad, (a) => { id = setTimeout(() => { good(a) }, time) })
+        run(bad, (a) => { id := setTimeout(() => { good(a) }, time) })
     }
     return () => {
       clearTimeout(id)
@@ -249,7 +250,7 @@ main = () => {
     File.read,
     map(Json.parse(parso)),
     delay(3000),
-    virtue(#[Term.text.underline("Parsing file..."), "Failed to parse!", "Parsed!"]),
+    virtue(#[Term.style.underline("Parsing file..."), "Failed to parse!", "Parsed!"]),
     Wish.fulfill((e) => { IO.trace("BAD", e) }, (x) => { IO.log(x) }),
   )("./madlib.json")
 }

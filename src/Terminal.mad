@@ -90,8 +90,8 @@ export ANSI_FN = {
   CursorRestore: "u",
   // n-ary
   GraphicsMode: "m",
+  RequestPosition: "6n",
 }
-// 6n ? CURSOR_REQUEST_POSITION
 
 export type EscapeSequence = Escape(Boolean, String, List String)
 export type Color = Color(List String)
@@ -141,8 +141,8 @@ erase = (mode, dir) => where(#[mode, dir]) {
   #[EraseInLine, EraseToBeginning] =>
     ansiFn(ANSI_FN.EraseInLine, [ERASER_LITERAL.ToBeginning])
 
-  #[EraseInLine, EraseToEnd] =>
-    ansiFn(ANSI_FN.EraseInLine, [ERASER_LITERAL.All])
+  // #[EraseInLine, EraseToEnd] =>
+  //   ansiFn(ANSI_FN.EraseInLine, [ERASER_LITERAL.All])
 
   // EraseLineHistory is not a thing!
 
@@ -198,6 +198,9 @@ cursorNullary = (cursor) => {
 
     CursorRestore =>
       call(ANSI_FN.CursorRestore)
+
+    _ =>
+      ""
   }
 }
 
@@ -293,6 +296,7 @@ export cursorMove = (x, y) => pipe(
 
 export colorSeq = ansiFn(ANSI_FN.GraphicsMode)
 export END_COLOR = colorSeq([GRAPHICS.Reset])
+export noColor = enprint(END_COLOR)
 
 /**
  * Adds colors to a string given a list of styles, with a trailing style reset.
@@ -318,7 +322,7 @@ alias PaletteKey = {
 }
 
 alias Seq = List String
-
+// k b c g m r w y
 type Palette = Palette(Seq, Seq, Seq, Seq, Seq, Seq, Seq, Seq)
 
 instance Semigroup Palette {
@@ -351,22 +355,6 @@ mix = (toAdd, palette) => assoc(
   palette,
 )
 
-concretePalette :: Palette -> PaletteKey
-concretePalette = where {
-  Palette(black, blue, cyan, green, magenta, red, white, yellow) =>
-    (
-      {
-        black: K(String.join("", black)),
-        blue: K(String.join("", blue)),
-        cyan: K(String.join("", cyan)),
-        green: K(String.join("", green)),
-        magenta: K(String.join("", magenta)),
-        red: K(String.join("", red)),
-        white: K(String.join("", white)),
-        yellow: K(String.join("", yellow)),
-      }
-    )
-}
 
 mapConcretePalette :: (List String -> String -> String) -> Palette -> PaletteKey
 mapConcretePalette = (fn, pal) => where(pal) {
@@ -385,7 +373,8 @@ mapConcretePalette = (fn, pal) => where(pal) {
     )
 }
 
-
+concretePalette :: Palette -> PaletteKey
+concretePalette = mapConcretePalette((color) => () => (String.join("", color)))
 
 export paletteBase = Palette(
   [gfx.FGBlack],
@@ -410,19 +399,19 @@ export paletteBright = Palette(
 export paletteDark = mix([gfx.BGBlack], paletteBase)
 export paletteLight = mix([gfx.BGWhite], paletteBright)
 
-export base = mapConcretePalette(ansiColor, paletteBase)
-export dark = mapConcretePalette(ansiColor, paletteDark)
-export light = mapConcretePalette(ansiColor, paletteLight)
-export bright = mapConcretePalette(ansiColor, paletteBright)
+makePalette = mapConcretePalette(ansiColor)
 
+export base = makePalette(paletteBase)
+export dark = makePalette(paletteDark)
+export light = makePalette(paletteLight)
+export bright = makePalette(paletteBright)
 
-
-
-export text = {
+export style = {
   base,
   bright,
   dark,
   light,
+  none: noColor,
   // text emphasis
   underline: ansiColor([gfx.Underline]),
   bold: ansiColor([gfx.Bold]),

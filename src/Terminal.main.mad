@@ -5,32 +5,24 @@ import Term from "@/Terminal"
 
 
 
-RAW = { a: 1, b: 2, c: 3 }
-RAW2 = Dict.fromList([#["A", 1], #["B", 2], #["C", 3]])
-RAW3 = {{ "a": 1, "b": 2, "c": 3 }}
-
-// you can't do this!
-// RAW_O = map((x) => x * 2, RAW)
-RAW2_0 = map((x) => x * 2, RAW2)
-RAW3_0 = map((x) => x * 3, RAW3)
-
 main = () => {
-  IO.cLog(Term.paletteDark)
-  IO.cLog(Term.paletteBase)
-  IO.trace(Term.base.yellow("YOOOO"), Term.base.red(">=>"))
-  IO.trace(Term.bright.cyan("YOOOO"), Term.bright.magenta("<=<"))
-  IO.trace(Term.dark.green("YOOOO"), Term.dark.magenta(">>>"))
-  IO.trace(Term.light.white("YOOOO"), Term.light.cyan("<<<"))
-  // IO.trace("RAWWWW x 2", RAW2_0)
-  // IO.trace("RAWWWW x 3", RAW3_0)
-  // IO.put(Term.CURSOR_SAVE)
-  IO.putLine(Term.ERASE_DISPLAY)
-  // Term.cursorMove(4, 8)
+  IO.put(Term.CURSOR_SAVE)
+  IO.put(Term.ERASE_DISPLAY)
+  // IO.cLog(Term.paletteDark)
+  // IO.cLog(Term.paletteBase)
+  IO.put(Term.base.yellow("GOOOO") ++ " " ++ Term.base.red(">=>"))
+  Term.cursorMove(4, 8)
+  IO.put(Term.bright.cyan("YOOOO") ++ " " ++ Term.bright.magenta("<=<"))
+  Term.cursorMove(3, 5)
+  IO.put(Term.dark.green("WHOAA") ++ " " ++ Term.dark.magenta(">>>"))
+  Term.cursorMove(6, 9)
+  IO.put(Term.light.white("NOOOO") ++ " " ++ Term.light.cyan("<<<"))
+  Term.cursorMove(7, 10)
   IO.put(Term.colorSeq([Term.GRAPHICS.FGRed, Term.GRAPHICS.Italic]) ++ "Hello!")
+  // IO.put(Term.CURSOR_RESTORE)
   // Term.cursorMove(1, 1)
   // IO.put(Term.colorSeq([Term.GRAPHICS.BGBrightCyan, Term.GRAPHICS.Bold]) ++ "HI!")
   // IO.put(Term.colorSeq([Term.GRAPHICS.Reset]))
   // Term.cursorMove(5, 3)
   // IO.put("Hallo!")
-  IO.put(Term.CURSOR_RESTORE)
 }
