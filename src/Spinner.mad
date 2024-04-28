@@ -47,18 +47,6 @@ clearTimeout = extern "__clearTimeout__"
 #endif
 
 
-
-// #elseif llvm
-
-// setTimeout :: ({} -> {}) -> Integer -> TimerId
-// setTimeout = extern "__setTimeout__"
-
-// clearTimeout :: TimerId -> {}
-// clearTimeout =  extern "__clearTimeout__"
-
-#endif
-
-
 saveCursor :: {} -> {}
 export saveCursor = () => {
   IO.put(Term.CURSOR_SAVE)
@@ -157,7 +145,7 @@ enspin = (framerate, frames, statuses) => {
   end = (spinnerStatus) => do {
     restoreCursor()
     Term.eraseLineToBeginning()
-    // moveCursorToNextLine()
+    moveCursorToNextLine()
     // IO.put("\n")
     IO.trace("SPINSTAT", spinnerStatus)
     return where(#[spinnerStatus, statuses]) {

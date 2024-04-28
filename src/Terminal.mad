@@ -9,7 +9,7 @@ K = always
 
 
 
-ESC = `\x1b`
+export ESC = `\x1b`
 
 // via https://en.wikipedia.org/wiki/ANSI_escape_code
 
@@ -249,6 +249,9 @@ cursorBinary = (cursor, x, y) => do {
 
 export CURSOR_SAVE = cursorNullary(CursorSave)
 export CURSOR_RESTORE = cursorNullary(CursorRestore)
+
+export cursorSave = enprint(CURSOR_SAVE)
+export cursorRestore = enprint(CURSOR_SAVE)
 
 
 export cursorSeqUp = cursorUnary(CursorUp)

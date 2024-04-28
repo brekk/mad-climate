@@ -1,0 +1,130 @@
+import String from "String"
+import { assertEquals, test } from "Test"
+
+import {
+  ANSI_FN,
+  CURSOR_RESTORE,
+  CURSOR_SAVE,
+  END_COLOR,
+  ERASER_LITERAL,
+  ERASE_DISPLAY,
+  ERASE_HISTORY,
+  ERASE_LINE,
+  ERASE_TO_BOD,
+  ERASE_TO_BOL,
+  ERASE_TO_EOD,
+  ERASE_TO_EOL,
+  ESC,
+  EraserDisplay,
+  EraserLine,
+  GRAPHICS,
+  ansiCall,
+  ansiColor,
+  ansiFn,
+  ansiSeq,
+  base,
+  bright,
+  colorSeq,
+  colorToEscape,
+  cursorBack,
+  cursorDown,
+  cursorForward,
+  cursorMove,
+  cursorMoveColumn,
+  cursorNextLine,
+  cursorPrevLine,
+  cursorRestore,
+  cursorSave,
+  cursorSeqBack,
+  cursorSeqDown,
+  cursorSeqForward,
+  cursorSeqMove,
+  cursorSeqMoveColumn,
+  cursorSeqNextLine,
+  cursorSeqPrevLine,
+  cursorSeqUp,
+  cursorUp,
+  dark,
+  enprint,
+  eraseDisplay,
+  eraseDisplayToBeginning,
+  eraseDisplayToEnd,
+  eraseHistory,
+  eraseLine,
+  eraseLineToBeginning,
+  eraseLineToEnd,
+  eraserToString,
+  escapeToString,
+  light,
+  noColor,
+  paletteBase,
+  paletteBright,
+  paletteDark,
+  paletteLight,
+  style,
+} from "@/Terminal"
+
+
+
+// test("GRAPHICS", () => assertEquals(GRAPHICS, ))
+// test("ANSI_FN", () => assertEquals(ANSI_FN, ))
+// test("ansiSeq", () => assertEquals(ansiSeq, ))
+// test("ansiFn", () => assertEquals(ansiFn, ))
+// test("ansiCall", () => assertEquals(ansiCall, ))
+// test("escapeToString", () => assertEquals(escapeToString, ))
+// test("colorToEscape", () => assertEquals(colorToEscape, ))
+// test("EraserDisplay", () => assertEquals(EraserDisplay, ))
+// test("EraserLine", () => assertEquals(EraserLine, ))
+// test("ERASER_LITERAL", () => assertEquals(ERASER_LITERAL, ))
+// test("eraserToString", () => assertEquals(eraserToString, ))
+// test("enprint", () => assertEquals(enprint, ))
+// test("ERASE_TO_EOL", () => assertEquals(ERASE_TO_EOL, ))
+// test("ERASE_TO_BOL", () => assertEquals(ERASE_TO_BOL, ))
+// test("ERASE_LINE", () => assertEquals(ERASE_LINE, ))
+// test("ERASE_TO_EOD", () => assertEquals(ERASE_TO_EOD, ))
+// test("ERASE_TO_BOD", () => assertEquals(ERASE_TO_BOD, ))
+// test("ERASE_DISPLAY", () => assertEquals(ERASE_DISPLAY, ))
+// test("ERASE_HISTORY", () => assertEquals(ERASE_HISTORY, ))
+// test("eraseLineToEnd", () => assertEquals(eraseLineToEnd, ))
+// test("eraseLineToBeginning", () => assertEquals(eraseLineToBeginning, ))
+// test("eraseLine", () => assertEquals(eraseLine, ))
+// test("eraseDisplayToEnd", () => assertEquals(eraseDisplayToEnd, ))
+// test("eraseDisplayToBeginning", () => assertEquals(eraseDisplayToBeginning, ))
+// test("eraseDisplay", () => assertEquals(eraseDisplay, ))
+// test("eraseHistory", () => assertEquals(eraseHistory, ))
+// test("CURSOR_SAVE", () => assertEquals(CURSOR_SAVE, ))
+// test("CURSOR_RESTORE", () => assertEquals(CURSOR_RESTORE, ))
+// test("cursorSave", () => assertEquals(cursorSave, ))
+// test("cursorRestore", () => assertEquals(cursorRestore, ))
+// test("cursorSeqUp", () => assertEquals(cursorSeqUp, ))
+// test("cursorSeqDown", () => assertEquals(cursorSeqDown, ))
+// test("cursorSeqForward", () => assertEquals(cursorSeqForward, ))
+// test("cursorSeqBack", () => assertEquals(cursorSeqBack, ))
+// test("cursorSeqNextLine", () => assertEquals(cursorSeqNextLine, ))
+// test("cursorSeqPrevLine", () => assertEquals(cursorSeqPrevLine, ))
+// test("cursorSeqMoveColumn", () => assertEquals(cursorSeqMoveColumn, ))
+// test("cursorUp", () => assertEquals(cursorUp, ))
+// test("cursorDown", () => assertEquals(cursorDown, ))
+// test("cursorForward", () => assertEquals(cursorForward, ))
+// test("cursorBack", () => assertEquals(cursorBack, ))
+// test("cursorNextLine", () => assertEquals(cursorNextLine, ))
+// test("cursorPrevLine", () => assertEquals(cursorPrevLine, ))
+// test("cursorMoveColumn", () => assertEquals(cursorMoveColumn, ))
+// test("cursorSeqMove", () => assertEquals(cursorSeqMove, ))
+// test("cursorMove", () => assertEquals(cursorMove, ))
+// test("colorSeq", () => assertEquals(colorSeq, ))
+// test("END_COLOR", () => assertEquals(END_COLOR, ))
+// test("noColor", () => assertEquals(noColor, ))
+// test("ansiColor", () => assertEquals(ansiColor, ))
+// test("paletteBase", () => assertEquals(paletteBase, ))
+// test("paletteBright", () => assertEquals(paletteBright, ))
+// test("paletteDark", () => assertEquals(paletteDark, ))
+// test("paletteLight", () => assertEquals(paletteLight, ))
+// test("base", () => assertEquals(base, ))
+// test("dark", () => assertEquals(dark, ))
+// test("light", () => assertEquals(light, ))
+// test("bright", () => assertEquals(bright, ))
+test(
+  "style",
+  () => assertEquals(style.underline("hey there"), ESC ++ "[4m" ++ "hey there" ++ END_COLOR),
+)
