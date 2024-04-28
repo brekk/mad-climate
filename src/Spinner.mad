@@ -68,16 +68,9 @@ restoreCursor :: {} -> {}
 export restoreCursor = () => {
   IO.put(Term.CURSOR_RESTORE)
 }
-/*
 moveCursorToNextLine :: {} -> {}
 export moveCursorToNextLine = () => {
-  IO.put(Term.cursorNextLine(1))
-}
-*/
-
-eraseLine :: {} -> {}
-export eraseLine = () => {
-  IO.put(Term.ERASE_LINE)
+  Term.cursorNextLine(1)
 }
 
 COOL_FRAMES = [
@@ -155,15 +148,15 @@ enspin = (framerate, frames, statuses) => {
             do {
               IO.put(f ++ " " ++ waiting)
             }
-
-          _ =>
-            IO.put("")
         }
+
+      Nothing =>
+        {}
     }
   }
   end = (spinnerStatus) => do {
     restoreCursor()
-    eraseLine()
+    Term.eraseLineToBeginning()
     // moveCursorToNextLine()
     // IO.put("\n")
     IO.trace("SPINSTAT", spinnerStatus)
@@ -200,10 +193,12 @@ spinner = (framerate, frames, statuses, wish) => {
   return bimap(
     (e) => {
       stop()
+      Term.eraseLineToBeginning()
       return e
     },
     (x) => {
       stop()
+      Term.eraseLineToBeginning()
       return x
     },
   )(wish)
