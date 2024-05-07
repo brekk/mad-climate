@@ -409,16 +409,23 @@ export dark = makePalette(paletteDark)
 export light = makePalette(paletteLight)
 export bright = makePalette(paletteBright)
 
+export underline = ansiColor([gfx.Underline])
+export bold = ansiColor([gfx.Bold])
+export italic = ansiColor([gfx.Italic])
+export boldUnderline = ansiColor([gfx.Bold, gfx.Underline])
+export emphatic = ansiColor([gfx.Bold, gfx.Underline, gfx.Italic])
+
 export style = {
   base,
   bright,
   dark,
   light,
   none: noColor,
-  // text emphasis
-  underline: ansiColor([gfx.Underline]),
-  bold: ansiColor([gfx.Bold]),
-  italic: ansiColor([gfx.Italic]),
-  boldUnderline: ansiColor([gfx.Bold, gfx.Underline]),
-  emphatic: ansiColor([gfx.Bold, gfx.Underline, gfx.Italic]),
+  underline,
+  bold,
+  italic,
+  boldUnderline,
+  emphatic,
 }
+
+// text emphasis

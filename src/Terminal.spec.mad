@@ -62,6 +62,7 @@ import {
   paletteDark,
   paletteLight,
   style,
+  underline,
 } from "@/Terminal"
 
 
@@ -124,7 +125,8 @@ import {
 // test("dark", () => assertEquals(dark, ))
 // test("light", () => assertEquals(light, ))
 // test("bright", () => assertEquals(bright, ))
+
 test(
-  "style",
-  () => assertEquals(style.underline("hey there"), ESC ++ "[4m" ++ "hey there" ++ END_COLOR),
+  "underline",
+  () => assertEquals(underline("hey there"), ESC ++ "[4m" ++ "hey there" ++ END_COLOR),
 )
